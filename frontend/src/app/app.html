@@ -1,65 +1,44 @@
-<main class="app-shell">
-  <aside class="sidebar" aria-label="Primary navigation">
-    <div class="brand">
+@if (auth.isAuthenticated()) {
+  <main class="app-shell">
+    <aside class="sidebar" aria-label="Primary navigation">
+      <div class="brand">
+        <span class="brand-mark">IT</span>
+        <span>Helpdesk</span>
+      </div>
+
+      <nav class="nav-links">
+        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Chat</a>
+        <a routerLink="/tickets" routerLinkActive="active">Tickets</a>
+        <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
+        <a routerLink="/knowledge-base" routerLinkActive="active">Knowledge Base</a>
+      </nav>
+    </aside>
+
+    <section class="workspace">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">AI-powered support</p>
+          <h1>IT Helpdesk & Ticketing</h1>
+        </div>
+
+        @if (auth.currentUser(); as user) {
+          <div class="user-menu">
+            <span>{{ user.username }} · {{ user.role }}</span>
+            <button type="button" class="secondary" (click)="logout()">Logout</button>
+          </div>
+        }
+      </header>
+
+      <router-outlet />
+    </section>
+  </main>
+} @else {
+  <main class="public-shell">
+    <header class="public-brand">
       <span class="brand-mark">IT</span>
       <span>Helpdesk</span>
-    </div>
-
-    <nav class="nav-links">
-      <a routerLink="/">Chat</a>
-      <a routerLink="/tickets">Tickets</a>
-      <a routerLink="/dashboard">Dashboard</a>
-      <a routerLink="/knowledge-base">Knowledge Base</a>
-    </nav>
-  </aside>
-
-  <section class="workspace">
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">AI-powered support</p>
-        <h1>IT Helpdesk & Ticketing</h1>
-      </div>
-      <button type="button">New Ticket</button>
     </header>
 
-    <section class="content-grid">
-      <article class="chat-panel">
-        <div class="panel-header">
-          <h2>Support Chat</h2>
-          <span>Ready</span>
-        </div>
-
-        <div class="message-list">
-          <p class="message assistant">Ask about IT issues, account access, hardware, or network problems.</p>
-          <p class="message user">The printer on floor 3 is jammed.</p>
-          <p class="message assistant">I can create a ticket and notify the IT team.</p>
-        </div>
-
-        <form class="chat-input">
-          <input type="text" placeholder="Describe the issue" aria-label="Describe the issue" />
-          <button type="submit">Send</button>
-        </form>
-      </article>
-
-      <aside class="queue-panel">
-        <h2>Ticket Queue</h2>
-        <dl>
-          <div>
-            <dt>Open</dt>
-            <dd>0</dd>
-          </div>
-          <div>
-            <dt>In Progress</dt>
-            <dd>0</dd>
-          </div>
-          <div>
-            <dt>Resolved Today</dt>
-            <dd>0</dd>
-          </div>
-        </dl>
-      </aside>
-    </section>
-
     <router-outlet />
-  </section>
-</main>
+  </main>
+}

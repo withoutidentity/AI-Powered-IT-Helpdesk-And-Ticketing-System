@@ -1,4 +1,4 @@
-﻿bin/
+bin/
 obj/
 
 .vs/
@@ -15,3 +15,5 @@ dist/
 *.user
 *.suo
 backend/artifacts/
+frontend/ng-serve.log
+backend/api-run.log

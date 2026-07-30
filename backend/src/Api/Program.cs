@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using CompositionRoot;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -6,6 +6,18 @@ using Microsoft.IdentityModel.Tokens;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy.WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 builder.Services.AddHelpdeskApplication(builder.Configuration);
 
 var jwtSecret = builder.Configuration["Jwt:Secret"];
@@ -32,6 +44,7 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+app.UseCors("Frontend");
 app.UseHttpsRedirection();
 
 app.UseAuthentication();

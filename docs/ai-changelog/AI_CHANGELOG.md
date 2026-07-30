@@ -12,6 +12,99 @@ Newest entries at the top.
 
 ---
 
+## [2026-07-30] Remove browser default page margin
+
+**Prompt/task summary:** The white border still appeared around the whole authenticated app after removing the placeholder card frame.
+
+**Files changed:**
+- `docs/ai-changelog/AI_CHANGELOG.md`
+- `frontend/src/styles.scss`
+
+**What changed:** Added global `html`/`body` styles to remove the browser default body margin, set the app background, and use border-box sizing globally.
+
+**Why this approach:** The remaining white frame was around the entire viewport, which points to browser default body margin rather than component-level card styling. Fixing it in the global stylesheet makes the Angular app fill the viewport consistently across all routes.
+
+**Alternatives considered:** Adding negative margins or expanding `.app-shell` was rejected because that would hide the symptom in one shell while leaving the global document margin intact.
+
+**Follow-ups / risks:** None for this layout fix.
+
+**Reviewed by human:** ☐
+
+---
+
+## [2026-07-30] Remove placeholder page frame
+
+**Prompt/task summary:** Remove the white framed placeholder panel shown after login so the protected workspace content does not look like a full-page card.
+
+**Files changed:**
+- `docs/ai-changelog/AI_CHANGELOG.md`
+- `frontend/src/app/features/dashboard/feature/placeholder-page.component.ts`
+
+**What changed:** Removed the placeholder page border, white background, radius, and card padding, leaving the route content as unframed text on the workspace surface.
+
+**Why this approach:** The white frame was coming from the temporary protected-route placeholder component, not the app shell. Removing the card styling keeps the authenticated shell cleaner and follows the frontend guidance to avoid unnecessary page-section cards.
+
+**Alternatives considered:** Changing the whole workspace background was rejected because the screenshot issue was localized to the placeholder component and broader layout changes would affect auth/dashboard surfaces unnecessarily.
+
+**Follow-ups / risks:** Replace this temporary placeholder with the real chat workspace in the next slice.
+
+**Reviewed by human:** ☐
+
+---
+
+## [2026-07-30] Fix frontend auth CORS and register feedback
+
+**Prompt/task summary:** Login failed in the browser with a CORS preflight error, while Postman worked; the register button also appeared to do nothing.
+
+**Files changed:**
+- `.env.example`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+- `backend/src/Api/Program.cs`
+- `backend/src/Api/appsettings.json`
+- `frontend/src/app/features/auth/feature/register-page.component.ts`
+- `frontend/src/app/features/auth/feature/register-page.component.html`
+- `frontend/src/app/features/auth/feature/auth-page.component.scss`
+
+**What changed:** Added `Cors:AllowedOrigins` for `http://localhost:4200`, moved CORS middleware before HTTPS redirection/auth in the API pipeline, and verified the browser preflight path returns `204` with `Access-Control-Allow-Origin: http://localhost:4200`. Added visible register-form validation and backend error feedback so invalid form submission no longer feels like a dead button.
+
+**Why this approach:** Postman bypasses browser CORS, so the failing path was the API preflight response rather than the auth command itself. CORS must be configured with the actual Angular origin and run early enough in the middleware pipeline to handle `OPTIONS` before auth or redirects interfere. Register feedback belongs in the component because the form was already correctly blocking invalid submissions, but the UI did not explain why.
+
+**Alternatives considered:** Disabling CORS globally or allowing every origin was rejected because the project docs call for CORS to be locked down to known frontend origins. Making the register button always disabled until valid was deferred because explicit field-level feedback is clearer while testing.
+
+**Follow-ups / risks:** Add environment-specific CORS values when deployment origins are known. The frontend still uses localStorage token storage for the dev slice and should be revisited before production.
+
+**Reviewed by human:** ☐
+
+---
+
+## [2026-07-30] Add frontend auth flow
+
+**Prompt/task summary:** Continue Phase 1 by adding frontend login/register pages, auth service, token storage, HTTP interceptor, and route guard.
+
+**Files changed:**
+- `docs/ai-changelog/AI_CHANGELOG.md`
+- `frontend/src/app/app.config.ts`
+- `frontend/src/app/app.html`
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/app.scss`
+- `frontend/src/app/app.spec.ts`
+- `frontend/src/app/core/auth/**`
+- `frontend/src/app/environments/environment.ts`
+- `frontend/src/app/features/auth/feature/**`
+- `frontend/src/app/features/dashboard/feature/placeholder-page.component.ts`
+
+**What changed:** Added typed auth DTOs, `AuthService` with local development token storage, a Bearer-token HTTP interceptor, and an `authGuard` that redirects unauthenticated users to `/login`. Added standalone login/register pages using reactive forms, updated routes for protected app pages, and adjusted the app shell to show authenticated navigation plus logout. Added protected placeholder pages so the guarded navigation can be tested before chat/ticket features are implemented. Added a dev CORS policy so the Angular app at `http://localhost:4200` can call the API at `http://localhost:5175`. Ignored local Angular/API dev-server log files used for background testing.
+
+**Why this approach:** This follows the frontend structure in `docs/PROJECT_PLAN.md` by keeping app-wide auth concerns under `core/auth` and feature pages under `features/auth/feature`. Local storage is acceptable for this dev slice because the backend currently issues JSON tokens and has no cookie/session policy; keeping all storage behind `AuthService` leaves room to swap the strategy later. The interceptor stays narrow and only attaches the access token so refresh/retry behavior can be added deliberately after logout/revoke semantics exist.
+
+**Alternatives considered:** Adding Angular Material was rejected for now because it would be a new design-system dependency and the current shell uses plain SCSS. Automatically refreshing on every `401` was deferred because the backend does not yet expose logout/revoke or session cleanup behavior, so silent retry policy should be designed with those endpoints together.
+
+**Follow-ups / risks:** Token storage is developer-oriented and should be revisited before production. Add logout/revoke support on the backend, then extend the interceptor to handle one-shot refresh on `401` responses.
+
+**Reviewed by human:** ☐
+
+---
+
 ## [2026-07-30] Persist and rotate refresh tokens
 
 **Prompt/task summary:** Continue Phase 1 after the .NET 10 migration by implementing the next auth slice: persisted refresh tokens and the `/api/v1/auth/refresh` endpoint.
