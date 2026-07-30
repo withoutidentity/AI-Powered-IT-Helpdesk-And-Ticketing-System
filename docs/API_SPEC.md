@@ -115,7 +115,7 @@ self-contained demo/dev flow.
 { "refreshToken": "8f14e45f..." }
 ```
 
-**Response `200 OK`** — same shape as login response, with rotated tokens.
+**Response `200 OK`** — same shape as login response, with rotated tokens. The submitted refresh token is looked up by hash, revoked, and replaced with a newly persisted refresh token hash.
 
 **Errors:** `401` invalid/expired/revoked refresh token
 

@@ -1,7 +1,7 @@
 # AI Changelog
 
 A running log of every AI-assisted/AI-agentic change made in this repository: what was
-done, and — more importantly — **why that approach was chosen**. This exists so that any
+done, and - more importantly - **why that approach was chosen**. This exists so that any
 change made by an AI coding agent is traceable and reviewable, the same way a thoughtful
 PR description would be for a human contributor.
 
@@ -12,6 +12,156 @@ Newest entries at the top.
 
 ---
 
+## [2026-07-30] Persist and rotate refresh tokens
+
+**Prompt/task summary:** Continue Phase 1 after the .NET 10 migration by implementing the next auth slice: persisted refresh tokens and the `/api/v1/auth/refresh` endpoint.
+
+**Files changed:**
+- `docs/API_SPEC.md`
+- `docs/ER_DIAGRAM.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+- `backend/src/Api/Controllers/AuthController.cs`
+- `backend/src/Application/Auth/Commands/Login/LoginCommandHandler.cs`
+- `backend/src/Application/Auth/Commands/Refresh/**`
+- `backend/src/Application/Auth/Models/TokenResult.cs`
+- `backend/src/Application/Common/Interfaces/IJwtTokenService.cs`
+- `backend/src/Application/Common/Interfaces/IRefreshTokenRepository.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/CompositionRoot/DependencyInjection.cs`
+- `backend/src/Domain/Entities/RefreshToken.cs`
+- `backend/src/Infrastructure/Identity/JwtTokenService.cs`
+- `backend/src/Infrastructure/Persistence/AppDbContext.cs`
+- `backend/src/Infrastructure/Persistence/Configurations/RefreshTokenConfiguration.cs`
+- `backend/src/Infrastructure/Persistence/Migrations/20260730110653_AddRefreshTokens*`
+- `backend/src/Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/RefreshTokenRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+
+**What changed:** Added a `RefreshToken` domain entity, repository interface/implementation, EF configuration, migration, and `refresh_tokens` table. Login now hashes and persists the refresh token before returning it. Added `RefreshCommand` handling for `/api/v1/auth/refresh`, which validates an active token by hash, issues a new access/refresh token pair, revokes the old token, and stores the replacement hash. Updated auth tests from four to six scenarios. Applied the migration to the local Docker PostgreSQL database and smoke-tested register, login, and refresh against the running API, then removed the temporary smoke-test user.
+
+**Why this approach:** Persisting only token hashes reduces blast radius if the database is inspected or leaked, while token rotation closes the gap where the previous login response returned refresh tokens that could not be validated or revoked. Keeping the flow in Application handlers preserves the existing MediatR/Clean Architecture pattern; hashing/generation stays behind `IJwtTokenService` in Infrastructure.
+
+**Alternatives considered:** Storing raw refresh tokens was rejected because it weakens secret handling. Reusing the `users` table for a single refresh token was rejected because it would make multi-device sessions and audit/revocation history harder. A full session-management feature was deferred to keep this slice focused on the API contract already documented in `API_SPEC.md`.
+
+**Follow-ups / risks:** There is no logout/revoke endpoint yet, and there is no cleanup job for expired refresh-token rows. Add those before treating auth as production-complete.
+
+**Reviewed by human:** ☐
+
+---
+
+## [2026-07-30] Migrate backend to .NET 10
+
+**Prompt/task summary:** Change the backend from .NET 8 to .NET 10 before continuing Phase 1, and update the project documents.
+
+**Files changed:**
+- `AGENTS.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+- `dotnet-tools.json`
+- `backend/Directory.Build.props`
+- `backend/src/Api/Api.csproj`
+- `backend/src/CompositionRoot/CompositionRoot.csproj`
+- `backend/src/Infrastructure/Infrastructure.csproj`
+
+**What changed:** Retargeted the backend projects from `net8.0` to `net10.0`, upgraded ASP.NET authentication, EF Core, Npgsql, Microsoft.Extensions, JWT, and local `dotnet-ef` tooling to .NET 10-compatible versions, and pinned package versions instead of leaving wildcard ranges. Updated the project context and tech-stack documentation to name .NET 10 LTS.
+
+**Why this approach:** The user approved the framework migration before the next Phase 1 slice. Moving now avoids carrying a local `DOTNET_ROLL_FORWARD=Major` workaround and aligns the repo with the SDK/runtime installed on the development machine. EF Core was pinned to `10.0.4` to match the latest compatible Npgsql EF provider graph and remove the EF Relational version conflict seen during the first build.
+
+**Alternatives considered:** Staying on `net8.0` plus installing the .NET 8 runtime would reduce package churn, but it keeps the project closer to the end of .NET 8 support and does not match the current machine. Leaving package versions as `10.*` was rejected because restores should be reproducible across machines.
+
+**Follow-ups / risks:** Existing EF migration files still show their original generator `ProductVersion` metadata from EF 8; that is historical migration metadata and should update naturally on the next generated migration. Re-run API smoke tests after the next auth slice if refresh-token persistence changes runtime behavior.
+
+**Reviewed by human:** ☐
+
+---
+
+## [2026-07-30] Implement backend auth foundation
+
+**Prompt/task summary:** Start Phase 1 slice one by adding backend dependencies, register/login endpoints, and the initial `users` table.
+
+**Files changed:**
+- `dotnet-tools.json`
+- `.env.example`
+- `.gitignore`
+- `docker-compose.yml`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+- `backend/HelpdeskTicketingSystem.slnx`
+- `backend/src/Api/Api.csproj`
+- `backend/src/Api/Program.cs`
+- `backend/src/Api/appsettings.json`
+- `backend/src/Api/Controllers/AuthController.cs`
+- `backend/src/Application/Application.csproj`
+- `backend/src/Application/DependencyInjection.cs`
+- `backend/src/Application/Auth/**`
+- `backend/src/Application/Common/Behaviors/ValidationBehavior.cs`
+- `backend/src/Application/Common/Interfaces/IJwtTokenService.cs`
+- `backend/src/Application/Common/Interfaces/IPasswordHasher.cs`
+- `backend/src/Application/Common/Interfaces/IUnitOfWork.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Common/Models/Result.cs`
+- `backend/src/CompositionRoot/**`
+- `backend/src/Domain/Entities/User.cs`
+- `backend/src/Domain/Enums/UserRole.cs`
+- `backend/src/Infrastructure/Infrastructure.csproj`
+- `backend/src/Infrastructure/Identity/**`
+- `backend/src/Infrastructure/Persistence/**`
+- `backend/tests/Application.UnitTests/**`
+
+**What changed:** Added the `User` domain entity and `UserRole` enum, EF Core `AppDbContext`, user repository, user configuration, and the first EF migration for the `users` table. Added MediatR-based register/login commands, validators, handlers, result models, password hashing, JWT token generation, auth API endpoints under `/api/v1/auth`, and a small `CompositionRoot` project for DI wiring. Added focused Application unit tests for register/login behavior. PostgreSQL is now published on host port `5433` to avoid the local port/auth collision seen on `5432`; Docker-internal access remains `db:5432` for pgAdmin.
+
+**Why this approach:** The slice starts with backend auth because later chat/ticket authorization depends on a stable authenticated user model. Register/login behavior lives in Application handlers behind interfaces so it remains unit-testable without EF or HTTP. EF Core and BCrypt/JWT implementations stay in Infrastructure. A separate CompositionRoot project keeps `Api` from directly referencing `Infrastructure`, preserving the dependency boundary in `AGENTS.md` while still allowing runtime DI composition.
+
+**Alternatives considered:** Wiring `Api` directly to `Infrastructure` would be simpler but was rejected because the repository instructions explicitly avoid a direct API-to-Infrastructure dependency. Resetting the PostgreSQL volume to fix host password failures was also rejected after the migration could be applied safely without data loss; changing the host-published port to `5433` was less destructive and made host EF tooling work.
+
+**Follow-ups / risks:** Refresh tokens are generated in the login response but are not yet persisted or rotatable; implement refresh-token storage before enabling `POST /auth/refresh`. This local runtime mismatch was later superseded by the .NET 10 backend migration entry above. The smoke test created and then removed a temporary `smoke.*` user from the dev database.
+
+**Reviewed by human:** ☐
+
+---
+## [2026-07-30] Fix pgAdmin default email placeholder
+
+**Prompt/task summary:** pgAdmin failed to start because `admin@helpdesk.local` was rejected as an invalid default email, and PostgreSQL client connection testing showed password authentication failures.
+
+**Files changed:**
+- `docker-compose.yml`
+- `.env.example`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the pgAdmin default email placeholder from `admin@helpdesk.local` to `admin@helpdesk.dev`, which pgAdmin accepts. Verified Docker Compose configuration, recreated the pgAdmin container so it picked up the corrected email, and tested PostgreSQL authentication inside the `db` container with `helpdesk/changeme`.
+
+**Why this approach:** pgAdmin validates default email addresses on startup and rejects `.local` as a reserved/special-use domain. Changing only the placeholder keeps the Docker setup intact while preserving the intent of having development-only credentials. The PostgreSQL password was verified directly against the running container before recommending destructive volume reset, avoiding unnecessary data loss.
+
+**Alternatives considered:** Disabling pgAdmin email validation was not chosen because using a syntactically accepted development email is simpler and closer to pgAdmin defaults. Resetting the PostgreSQL volume was considered for the password failure, but rejected after container-side authentication with `helpdesk/changeme` succeeded.
+
+**Follow-ups / risks:** If a desktop database client still fails authentication, clear any saved password for that connection and recreate it with host `localhost`, port `5432`, database `helpdesk`, username `helpdesk`, and password `changeme`.
+
+**Reviewed by human:** ☐
+
+---
+## [2026-07-30] Add pgAdmin for local database inspection
+
+**Prompt/task summary:** Add pgAdmin4 to Docker Compose so PostgreSQL data can be inspected through a browser UI instead of using CLI commands.
+
+**Files changed:**
+- `docker-compose.yml`
+- `.env.example`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a `pgadmin` service using the official `dpage/pgadmin4` image, exposed it on `http://localhost:5050`, persisted its state in a `pgadmin-data` volume, and configured it to wait for the `db` service health check. Added pgAdmin development credentials to `.env.example` and documented how to register the Docker-networked PostgreSQL server in pgAdmin.
+
+**Why this approach:** pgAdmin directly addresses the need to inspect tables and records without dropping into PostgreSQL CLI tooling. Keeping it in Docker Compose makes local setup repeatable and keeps it isolated from production secrets. The service uses host `db` for database registration because Docker Compose service names resolve on the internal network, which is more reliable than connecting from pgAdmin to `localhost` inside its own container.
+
+**Alternatives considered:** Installing pgAdmin on the host machine was rejected because it adds manual machine-specific setup outside the project. Adminer was considered because it is lighter, but pgAdmin is the more familiar PostgreSQL-focused UI and better matches the user's request for pgAdmin4 specifically.
+
+**Follow-ups / risks:** The default pgAdmin and database passwords are development placeholders only; replace them in a real `.env` before exposing the compose stack beyond local development. The API/web/nginx services are still documented as planned compose services but not yet implemented in `docker-compose.yml`.
+
+**Reviewed by human:** ☐
+
+---
 ## [2026-07-30] Move backend into dedicated folder
 
 **Prompt/task summary:** Clarify whether Docker must be run now and whether backend API
@@ -156,7 +306,7 @@ commands are scoped to this directory.
 
 **What changed:** plain description of the change
 
-**Why this approach:** the reasoning behind it — trade-offs considered, why this option
+**Why this approach:** the reasoning behind it - trade-offs considered, why this option
 over alternatives, any constraints from `docs/PROJECT_PLAN.md` that drove the decision
 
 **Alternatives considered:** (if any) briefly, and why they were rejected
@@ -167,7 +317,7 @@ over alternatives, any constraints from `docs/PROJECT_PLAN.md` that drove the de
 
 ---
 
-## Example entry (for reference — delete once the first real entry is added)
+## Example entry (for reference - delete once the first real entry is added)
 
 ## [2026-07-29] Scaffold ticket status transition validation
 
@@ -188,7 +338,7 @@ Conflict`-mapped domain exception on an invalid transition.
 
 **Why this approach:** Put the rule on the `Ticket` entity itself (not just in the
 handler) so the invariant holds no matter which code path mutates a ticket in the
-future — this matches the Clean Architecture principle in `docs/PROJECT_PLAN.md` §8 of
+future - this matches the Clean Architecture principle in `docs/PROJECT_PLAN.md`of
 keeping business rules in the Domain layer rather than scattered across handlers.
 
 **Alternatives considered:** A database `CHECK` constraint enforcing transitions was

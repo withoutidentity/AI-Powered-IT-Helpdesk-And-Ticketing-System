@@ -31,6 +31,16 @@ erDiagram
         timestamptz created_at
     }
 
+    REFRESH_TOKENS {
+        uuid id PK
+        uuid user_id FK
+        string token_hash UK
+        timestamptz expires_at
+        timestamptz created_at
+        timestamptz revoked_at "nullable"
+        string replaced_by_token_hash "nullable"
+    }
+
     CONVERSATIONS {
         uuid id PK
         uuid user_id FK
@@ -101,6 +111,11 @@ erDiagram
 - `password_hash` stores a BCrypt/Argon2 hash — never plaintext, never logged.
 - `role` is an enum-backed string (`smallint` in the DB via EF Core's enum-to-int
   conversion is also acceptable; string is friendlier for ad-hoc queries/debugging).
+
+### `refresh_tokens`
+- Stores only a SHA-256 hash of each refresh token; the raw token is returned to the client once and never persisted.
+- Login creates a refresh token row. `POST /auth/refresh` rotates tokens by revoking the old row and storing the replacement hash in `replaced_by_token_hash` for auditability.
+- Expired or revoked refresh tokens are rejected in the Application layer before issuing a new access token.
 
 ### `conversations`
 - `last_message_at` is denormalized onto the conversation for cheap sorting in the

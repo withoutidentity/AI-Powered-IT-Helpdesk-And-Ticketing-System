@@ -9,7 +9,7 @@ code, and follow it alongside `docs/PROJECT_PLAN.md`, `docs/API_SPEC.md`, and
 
 ## 1. Project context (short version)
 
-AI-Powered IT Helpdesk & Ticketing system. Angular frontend, ASP.NET Core (.NET 8)
+AI-Powered IT Helpdesk & Ticketing system. Angular frontend, ASP.NET Core (.NET 10 LTS)
 backend using Clean Architecture + CQRS/MediatR, PostgreSQL + pgvector, Groq API for
 chat/embeddings, Discord webhooks for ticket notifications. Full details in
 `docs/PROJECT_PLAN.md`.

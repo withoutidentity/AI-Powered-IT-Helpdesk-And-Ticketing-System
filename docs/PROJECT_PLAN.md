@@ -2,7 +2,7 @@
 
 **Status:** Draft (personal template — not tied to any employer's assignment)
 **Owner:** Muhqi
-**Last updated:** 2026-07-29
+**Last updated:** 2026-07-30
 
 ---
 
@@ -109,7 +109,7 @@ production-grade practices, using:
 | Frontend | **Angular** (standalone components) | Strong typing, opinionated structure, good fit for enterprise-style dashboards + reactive chat UI |
 | Frontend state | Angular Signals + RxJS | Signals for local/component state, RxJS for async streams (SSE, HTTP) |
 | Frontend styling | Angular Material or Tailwind (pick one, don't mix design systems) | Consistent UI without hand-rolling components |
-| Backend | **ASP.NET Core Web API (.NET 8 LTS)** | Mature, fast, first-class DI, great tooling for Clean Architecture |
+| Backend | **ASP.NET Core Web API (.NET 10 LTS)** | Mature, fast, first-class DI, great tooling for Clean Architecture; chosen over .NET 8 because it gives the project a longer LTS support window for new development |
 | Backend pattern | Clean Architecture + CQRS (MediatR) | Separates business logic from framework/infra concerns; testable |
 | ORM | Entity Framework Core | Migrations, LINQ, good Postgres support via Npgsql |
 | Database | PostgreSQL + `pgvector` extension | One database for both relational data and vector search — avoids running a separate vector DB |
@@ -436,12 +436,19 @@ the app is stable.
 
 | Service | Purpose |
 |---|---|
-| `db` | `pgvector/pgvector:pg16` image — Postgres with the extension preinstalled |
+| `db` | `pgvector/pgvector:pg16` image - Postgres with the extension preinstalled, published to host port `5433` for local tools |
+| `pgadmin` | Browser-based PostgreSQL administration UI for local inspection at `http://localhost:5050` |
 | `api` | ASP.NET Core backend |
 | `web` | Angular app (built static files served by its own lightweight Nginx, or served via the main `nginx` service) |
-| `nginx` | Reverse proxy: routes `/api/*` → `api`, everything else → `web`; TLS termination in prod |
+| `nginx` | Reverse proxy: routes `/api/*` to `api`, everything else to `web`; TLS termination in prod |
 
-See `docs/PROJECT_PLAN.md` §6 for why n8n was intentionally left out of this compose
+For local database inspection, start `db` and `pgadmin`, then sign in to pgAdmin with
+the `PGADMIN_DEFAULT_EMAIL` / `PGADMIN_DEFAULT_PASSWORD` values from `.env`. Register a
+server using host `db`, port `5432`, database `helpdesk`, username `helpdesk`, and the
+configured `POSTGRES_PASSWORD`. Desktop database clients running on the host machine should
+use host `localhost` and port `5433` to avoid collisions with any local PostgreSQL service.
+
+See `docs/PROJECT_PLAN.md` section 6 for why n8n was intentionally left out of this compose
 stack for v1.
 
 ---
