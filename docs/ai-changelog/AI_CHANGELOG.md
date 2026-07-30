@@ -12,6 +12,78 @@ Newest entries at the top.
 
 ---
 
+## [2026-07-30] Add chat happy path and ticket attachment metadata
+
+**Prompt/task summary:** Explain when KB docs/chunks/vector should be implemented, add ticket support for attachments, and start Phase 3 backend chat happy path without AI.
+
+**Files changed:**
+- `docs/API_SPEC.md`
+- `docs/ER_DIAGRAM.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+- `backend/src/Api/Controllers/ChatController.cs`
+- `backend/src/Api/Program.cs`
+- `backend/src/Api/Services/CurrentUserService.cs`
+- `backend/src/Application/Chat/**`
+- `backend/src/Application/Common/Interfaces/IConversationRepository.cs`
+- `backend/src/Application/Common/Interfaces/ICurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/IMessageRepository.cs`
+- `backend/src/CompositionRoot/DependencyInjection.cs`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/src/Infrastructure/Persistence/Configurations/TicketConfiguration.cs`
+- `backend/src/Infrastructure/Persistence/Migrations/20260730131340_AddTicketAttachmentsAndChatHappyPath*`
+- `backend/src/Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/ConversationRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/MessageRepository.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+
+**What changed:** Added `tickets.attachments` as a non-null `jsonb` metadata array with default `[]`. Added current-user access, conversation/message repositories, chat Application handlers, and authenticated chat endpoints for creating/listing conversations, listing messages, and sending a message. The current send-message flow persists both the user message and a canned assistant response without AI/RAG. Added tests for current-user scoping and chat message persistence. Applied the migration to local Docker PostgreSQL and smoke-tested register, login, create conversation, send message, and list messages against the running API, then removed the temporary smoke-test user.
+
+**Why this approach:** KB docs/chunks/vector were deferred to the RAG phase because vector dimensions and indexes depend on the chosen embedding model. Ticket attachments are represented as metadata JSON rather than binary data because the database row should reference uploaded files, not store file contents. The Phase 3 chat path proves authenticated persistence and ownership boundaries before adding Groq, streaming, intent classification, or ticket automation.
+
+**Alternatives considered:** A separate `ticket_attachments` table was considered and is still a good option if attachment querying/auditing becomes complex; a `jsonb` column was chosen now because the user specifically asked for a ticket column and this slice only needs future upload metadata support. Implementing SSE immediately was rejected because this is the no-AI happy path and streaming belongs with the AI integration slice.
+
+**Follow-ups / risks:** Add real upload storage and validation before exposing attachment upload UI. Replace the canned assistant response with intent classification/RAG streaming in the AI slices. Add integration tests around JWT-protected chat endpoints when the API test project exists.
+
+**Reviewed by human:** ☐
+
+---
+
+## [2026-07-30] Add Phase 2 core ticketing data model
+
+**Prompt/task summary:** Start Phase 2 by adding the core backend data model for conversations, messages, tickets, and ticket comments in one focused slice.
+
+**Files changed:**
+- `docs/ER_DIAGRAM.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+- `backend/src/Domain/Entities/Conversation.cs`
+- `backend/src/Domain/Entities/Message.cs`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/src/Domain/Entities/TicketComment.cs`
+- `backend/src/Domain/Enums/MessageIntent.cs`
+- `backend/src/Domain/Enums/MessageSender.cs`
+- `backend/src/Domain/Enums/TicketPriority.cs`
+- `backend/src/Domain/Enums/TicketStatus.cs`
+- `backend/src/Infrastructure/Persistence/AppDbContext.cs`
+- `backend/src/Infrastructure/Persistence/Configurations/ConversationConfiguration.cs`
+- `backend/src/Infrastructure/Persistence/Configurations/MessageConfiguration.cs`
+- `backend/src/Infrastructure/Persistence/Configurations/TicketConfiguration.cs`
+- `backend/src/Infrastructure/Persistence/Configurations/TicketCommentConfiguration.cs`
+- `backend/src/Infrastructure/Persistence/Migrations/20260730124936_AddCoreTicketingModel*`
+- `backend/src/Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
+- `backend/tests/Application.UnitTests/Domain/CoreDataModelTests.cs`
+
+**What changed:** Added domain entities and enum-backed state for conversations, messages, tickets, and ticket comments. Added EF Core mappings, DbSets, indexes, foreign keys, and the `AddCoreTicketingModel` migration for `conversations`, `messages`, `tickets`, and `ticket_comments`. Added unit tests for conversation creation/message timestamps, ticket defaults, ticket lifecycle transitions, assignment, and comment content normalization. Updated the ER documentation to match the implemented auth/ticketing schema notes.
+
+**Why this approach:** This keeps Phase 2 focused on the relational foundation needed by the next chat happy-path slice without mixing in AI/RAG behavior. Ticket lifecycle rules live in the Domain entity so later Application handlers can call one policy instead of duplicating transition checks. `TicketComment` was included because it is already part of the documented ticket schema and does not require additional product decisions.
+
+**Alternatives considered:** Implementing all Phase 2 tables including knowledge-base documents/chunks was deferred because vector dimensions and indexing depend on the selected embedding model, which should be confirmed during the RAG slice. Adding API endpoints in the same change was rejected to keep schema/domain risk separate from HTTP authorization behavior.
+
+**Follow-ups / risks:** Apply the migration to any non-local database before using upcoming chat/ticket endpoints. The next slice should add Application repositories/use cases and API endpoints for the chat happy path.
+
+**Reviewed by human:** ☐
+
+---
+
 ## [2026-07-30] Remove browser default page margin
 
 **Prompt/task summary:** The white border still appeared around the whole authenticated app after removing the placeholder card frame.

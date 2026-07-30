@@ -10,6 +10,7 @@ Database: **PostgreSQL 16** with the **`pgvector`** extension enabled
 ```mermaid
 erDiagram
     USERS ||--o{ CONVERSATIONS : starts
+    USERS ||--o{ REFRESH_TOKENS : owns
     USERS ||--o{ TICKETS : creates
     USERS ||--o{ TICKETS : "assigned to (nullable)"
     USERS ||--o{ TICKET_COMMENTS : writes
@@ -126,11 +127,16 @@ erDiagram
   user messages get classified.
 
 ### `tickets`
+- New tickets start as `Open`, with `Medium` priority unless the creating use case supplies a different priority.
+- `attachments` stores a JSON metadata array for future uploads (for example file name, content type, size, storage key). Actual file bytes should live in object storage or a file service, not in the `tickets` row.
 - `message_id` links back to the specific message that triggered ticket creation, for
   audit/traceability (`"why was this ticket opened?"`).
 - Status transitions are enforced in the **Application layer** (a `TicketStatusTransition`
   policy), not just as a loose string column — invalid transitions (e.g. `Closed →
   InProgress` without going through re-open logic) return `409 Conflict`.
+
+### `ticket_comments`
+- Comments are linked to both the ticket and author so future list/detail endpoints can enforce owner/staff access while preserving an audit trail.
 
 ### `knowledge_documents` / `document_chunks`
 - `embedding` uses `pgvector`'s `vector(n)` type, where `n` matches the chosen embedding

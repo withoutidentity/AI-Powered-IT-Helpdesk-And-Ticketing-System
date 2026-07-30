@@ -2,7 +2,7 @@
 
 **Base URL (dev):** `http://localhost:8080/api/v1`
 **Auth:** Bearer JWT in `Authorization: Bearer <token>` header, except where noted.
-**Content type:** `application/json` unless noted (SSE endpoint uses `text/event-stream`).
+**Content type:** `application/json` unless noted. The chat send-message endpoint uses JSON in the current no-AI slice and will switch to `text/event-stream` when streaming AI is implemented.
 
 This is a human-readable companion to the live **Swagger/OpenAPI** UI that ASP.NET Core
 generates automatically (`/swagger`). Keep both in sync; treat Swagger as the source of
@@ -192,41 +192,42 @@ not blanket access).
 
 ---
 
-### `POST /chat/conversations/{conversationId}/messages` (streaming)
-Sends a user message and streams the assistant's reply.
+### `POST /chat/conversations/{conversationId}/messages`
+Sends a user message and returns the persisted user message plus a canned assistant response in the current no-AI happy path. Streaming SSE replaces this temporary JSON response in the AI integration slice.
 
-**Auth required:** Yes — must be the conversation owner.
-**Response content-type:** `text/event-stream`
+**Auth required:** Yes - must be the conversation owner.
+**Response content-type:** `application/json` in the current no-AI slice; `text/event-stream` when streaming AI is implemented.
 
 **Request**
 ```json
 { "content": "The printer on floor 3 is jammed, can someone take a look?" }
 ```
 
-**Response (SSE stream)**
+**Response `200 OK` (current no-AI slice)**
+```json
+{
+  "userMessage": {
+    "id": "m1...",
+    "conversationId": "c1a2b3c4-...",
+    "sender": "User",
+    "content": "The printer on floor 3 is jammed, can someone take a look?",
+    "intent": null,
+    "createdAt": "2026-07-30T12:00:00Z"
+  },
+  "assistantMessage": {
+    "id": "m2...",
+    "conversationId": "c1a2b3c4-...",
+    "sender": "Assistant",
+    "content": "I recorded your message. AI classification and RAG answers will be enabled in a later slice.",
+    "intent": null,
+    "createdAt": "2026-07-30T12:00:00Z"
+  }
+}
 ```
-event: intent
-data: {"intent":"Action"}
 
-event: token
-data: {"delta":"Got"}
+**Future streaming response (AI slice):** this endpoint will switch to SSE frames for `intent`, `token`, optional `sources`, and `done` once Groq streaming and RAG are implemented.
 
-event: token
-data: {"delta":" it"}
-
-event: token
-data: {"delta":" — I've opened ticket #1042 for the floor 3 printer."}
-
-event: done
-data: {"messageId":"m3...","ticketId":"t1042...","intent":"Action"}
-```
-
-For `Question` intent, an additional `event: sources` frame is emitted before `done`,
-listing the knowledge-base chunks used as context.
-
-**Errors:** `403` not the conversation owner, `404` conversation not found, `429` rate
-limited, `502` upstream AI provider error (surfaced as a graceful in-chat error message,
-not a raw 502 to the end user in the UI layer)
+**Errors:** `403` not the conversation owner, `404` conversation not found, `429` rate limited, `502` upstream AI provider error after AI integration is enabled
 
 ---
 
@@ -326,7 +327,8 @@ queue), `ITAdmin` (sees all)
   "assignedTo": null,
   "comments": [],
   "createdAt": "2026-07-29T09:06:00Z",
-  "updatedAt": "2026-07-29T09:06:00Z"
+  "updatedAt": "2026-07-29T09:06:00Z",
+  "attachments": []
 }
 ```
 
