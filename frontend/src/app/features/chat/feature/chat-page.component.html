@@ -30,10 +30,21 @@
         <p class="eyebrow">{{ activeConversation()?.title ?? 'New conversation' }}</p>
         <h2>Chat workspace</h2>
       </div>
+      <button
+        type="button"
+        class="ticket-action"
+        [disabled]="!canCreateTicket() || isCreatingTicket()"
+        (click)="createTicketForConversation()">
+        {{ conversationHasTicket() ? 'Ticket created' : (isCreatingTicket() ? 'Creating...' : 'Create ticket') }}
+      </button>
     </div>
 
     @if (errorMessage()) {
       <p class="error-message">{{ errorMessage() }}</p>
+    }
+
+    @if (statusMessage()) {
+      <p class="status-message">{{ statusMessage() }}</p>
     }
 
     <div class="message-list" #messageList>

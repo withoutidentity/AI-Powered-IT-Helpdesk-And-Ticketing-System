@@ -25,6 +25,7 @@ public sealed class ChatCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         result.Value!.UserId.Should().Be(currentUserId);
         result.Value.Title.Should().Be("Printer help");
+        result.Value.HasTicket.Should().BeFalse();
         conversations.Items.Should().ContainSingle();
         unitOfWork.SaveCalls.Should().Be(1);
     }
@@ -37,7 +38,7 @@ public sealed class ChatCommandHandlerTests
         var conversations = new FakeConversationRepository();
         conversations.Items.Add(Conversation.Start(currentUserId, "Mine", DateTimeOffset.UtcNow));
         conversations.Items.Add(Conversation.Start(otherUserId, "Other", DateTimeOffset.UtcNow));
-        var handler = new GetConversationsQueryHandler(new FakeCurrentUserService(currentUserId), conversations);
+        var handler = new GetConversationsQueryHandler(new FakeCurrentUserService(currentUserId), conversations, new FakeTicketRepository());
 
         var result = await handler.Handle(new GetConversationsQuery(), CancellationToken.None);
 
@@ -46,6 +47,24 @@ public sealed class ChatCommandHandlerTests
         result.Value![0].Title.Should().Be("Mine");
     }
 
+
+    [Fact]
+    public async Task GetConversations_ConversationWithTicket_ReturnsHasTicket()
+    {
+        var currentUserId = Guid.NewGuid();
+        var conversation = Conversation.Start(currentUserId, "Printer", DateTimeOffset.UtcNow);
+        var conversations = new FakeConversationRepository();
+        conversations.Items.Add(conversation);
+        var tickets = new FakeTicketRepository();
+        tickets.Items.Add(Ticket.Create(conversation.Id, Guid.NewGuid(), currentUserId, "Printer", "Printer issue", DateTimeOffset.UtcNow));
+        var handler = new GetConversationsQueryHandler(new FakeCurrentUserService(currentUserId), conversations, tickets);
+
+        var result = await handler.Handle(new GetConversationsQuery(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().ContainSingle();
+        result.Value![0].HasTicket.Should().BeTrue();
+    }
     [Fact]
     public async Task SendMessage_OwnConversation_PersistsUserAndAssistantMessages()
     {
@@ -187,7 +206,7 @@ public sealed class ChatCommandHandlerTests
     }
 
     [Fact]
-    public async Task CreateTicketFromMessage_ExistingTicketForMessage_ReturnsConflict()
+    public async Task CreateTicketFromMessage_ExistingTicketForConversation_ReturnsConflict()
     {
         var currentUserId = Guid.NewGuid();
         var conversation = Conversation.Start(currentUserId, "Help", DateTimeOffset.UtcNow.AddMinutes(-2));
@@ -197,7 +216,7 @@ public sealed class ChatCommandHandlerTests
         var messages = new FakeMessageRepository();
         messages.Items.Add(message);
         var tickets = new FakeTicketRepository();
-        tickets.Items.Add(Ticket.Create(conversation.Id, message.Id, currentUserId, "Need help", "Need help", DateTimeOffset.UtcNow));
+        tickets.Items.Add(Ticket.Create(conversation.Id, Guid.NewGuid(), currentUserId, "Existing ticket", "Existing ticket", DateTimeOffset.UtcNow));
         var handler = new CreateTicketFromMessageCommandHandler(
             new FakeCurrentUserService(currentUserId),
             conversations,
@@ -277,9 +296,19 @@ public sealed class ChatCommandHandlerTests
     {
         public List<Ticket> Items { get; } = new();
 
-        public Task<Ticket?> GetByMessageIdAsync(Guid messageId, CancellationToken cancellationToken)
+        public Task<Ticket?> GetByConversationIdAsync(Guid conversationId, CancellationToken cancellationToken)
         {
-            return Task.FromResult(Items.FirstOrDefault(ticket => ticket.MessageId == messageId));
+            return Task.FromResult(Items.FirstOrDefault(ticket => ticket.ConversationId == conversationId));
+        }
+
+        public Task<IReadOnlySet<Guid>> ListConversationIdsWithTicketsAsync(IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken)
+        {
+            IReadOnlySet<Guid> result = Items
+                .Where(ticket => conversationIds.Contains(ticket.ConversationId))
+                .Select(ticket => ticket.ConversationId)
+                .ToHashSet();
+
+            return Task.FromResult(result);
         }
 
         public Task AddAsync(Ticket ticket, CancellationToken cancellationToken)
@@ -299,3 +328,5 @@ public sealed class ChatCommandHandlerTests
         }
     }
 }
+
+

@@ -129,7 +129,7 @@ erDiagram
 ### `tickets`
 - New tickets start as `Open`, with `Medium` priority unless the creating use case supplies a different priority.
 - `attachments` stores a JSON metadata array for future uploads (for example file name, content type, size, storage key). Actual file bytes should live in object storage or a file service, not in the `tickets` row.
-- `message_id` links back to the specific message that triggered ticket creation, for
+- At most one ticket should be created per conversation in the current product flow. `message_id` still links back to the specific latest/user message that triggered ticket creation, for
   audit/traceability (`"why was this ticket opened?"`).
 - Status transitions are enforced in the **Application layer** (a `TicketStatusTransition`
   policy), not just as a loose string column — invalid transitions (e.g. `Closed →

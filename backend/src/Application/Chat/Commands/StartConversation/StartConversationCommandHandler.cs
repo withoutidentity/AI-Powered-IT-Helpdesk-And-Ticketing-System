@@ -31,6 +31,7 @@ public sealed class StartConversationCommandHandler : IRequestHandler<StartConve
             conversation.UserId,
             conversation.Title,
             conversation.CreatedAt,
-            conversation.LastMessageAt));
+            conversation.LastMessageAt,
+            HasTicket: false));
     }
 }

@@ -141,7 +141,9 @@ Starts a new conversation for the authenticated user.
   "id": "c1a2b3c4-...",
   "userId": "b3f1e2a0-...",
   "title": "New conversation",
-  "createdAt": "2026-07-29T09:05:00Z"
+  "createdAt": "2026-07-29T09:05:00Z",
+  "lastMessageAt": "2026-07-29T09:05:00Z",
+  "hasTicket": false
 }
 ```
 
@@ -154,13 +156,15 @@ users' conversations here — that's an explicit privacy boundary, not just a UI
 **Auth required:** Yes
 **Query:** `?page=1&pageSize=20`
 
+`hasTicket` is `true` when the conversation has already produced its single allowed ticket. The frontend uses this value after refresh/selecting a conversation to disable the create action and show `Ticket created` immediately.
+
 **Response `200 OK`** — paginated envelope of:
 ```json
 {
   "id": "c1a2b3c4-...",
   "title": "Wi-Fi issue",
   "lastMessageAt": "2026-07-29T09:12:00Z",
-  "hasOpenTicket": true
+  "hasTicket": true
 }
 ```
 
@@ -231,7 +235,9 @@ Sends a user message and returns the persisted user message plus a canned assist
 ---
 
 ### `POST /chat/conversations/{conversationId}/messages/{messageId}/ticket`
-Creates a ticket from a persisted user message in the current no-AI/manual handoff slice. This is the explicit version of the future AI `Action` intent path.
+Creates the single ticket for a conversation from a persisted user message in the current no-AI/manual handoff slice. This is the explicit version of the future AI `Action` intent path.
+
+> **Frontend handoff implementation note:** the Angular Chat page exposes this as a conversation-level `Create ticket` action in the message panel header. The current UI uses the latest user message as the originating message, sends its content as the default title/description, and sends `Medium` priority.
 
 **Auth required:** Yes - must be the conversation owner.
 
@@ -262,7 +268,7 @@ Creates a ticket from a persisted user message in the current no-AI/manual hando
 }
 ```
 
-**Errors:** `403` not the conversation owner, `404` conversation/message not found, `400` assistant message or invalid priority, `409` ticket already exists for the message
+**Errors:** `403` not the conversation owner, `404` conversation/message not found, `400` assistant message or invalid priority, `409` ticket already exists for the conversation
 
 **Errors:** `403` not the conversation owner, `404` conversation not found, `429` rate limited, `502` upstream AI provider error after AI integration is enabled
 
@@ -439,3 +445,7 @@ queue), `ITAdmin` (sees all)
 **Auth required:** No
 **Response `200 OK` / `503 Service Unavailable`** — checks DB connectivity and (optionally,
 non-blocking) Groq API reachability.
+
+
+
+

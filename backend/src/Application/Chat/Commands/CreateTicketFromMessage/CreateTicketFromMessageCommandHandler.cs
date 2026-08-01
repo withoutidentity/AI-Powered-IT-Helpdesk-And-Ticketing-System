@@ -53,10 +53,10 @@ public sealed class CreateTicketFromMessageCommandHandler : IRequestHandler<Crea
             return Result<TicketDto>.Failure("InvalidMessage", "Only user messages can create tickets.");
         }
 
-        var existingTicket = await _tickets.GetByMessageIdAsync(message.Id, cancellationToken);
+        var existingTicket = await _tickets.GetByConversationIdAsync(conversation.Id, cancellationToken);
         if (existingTicket is not null)
         {
-            return Result<TicketDto>.Failure("TicketAlreadyExists", "A ticket already exists for this message.");
+            return Result<TicketDto>.Failure("TicketAlreadyExists", "A ticket already exists for this conversation.");
         }
 
         var priority = ParsePriority(request.Priority);

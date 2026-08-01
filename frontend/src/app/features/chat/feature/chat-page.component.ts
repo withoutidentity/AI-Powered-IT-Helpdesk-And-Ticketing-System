@@ -23,9 +23,14 @@ export class ChatPageComponent implements OnInit {
   readonly isLoadingConversations = signal(false);
   readonly isLoadingMessages = signal(false);
   readonly isSending = signal(false);
+  readonly isCreatingTicket = signal(false);
+  readonly conversationHasTicket = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly statusMessage = signal<string | null>(null);
 
   readonly hasMessages = computed(() => this.messages().length > 0);
+  readonly latestUserMessage = computed(() => [...this.messages()].reverse().find((message) => message.sender === 'User') ?? null);
+  readonly canCreateTicket = computed(() => Boolean(this.activeConversation() && this.latestUserMessage() && !this.conversationHasTicket()));
 
   readonly messageForm = this.formBuilder.nonNullable.group({
     content: ['', [Validators.required, Validators.maxLength(4000)]],
@@ -44,6 +49,7 @@ export class ChatPageComponent implements OnInit {
     ).subscribe({
       next: (conversations) => {
         this.conversations.set(conversations);
+        this.syncActiveConversationTicketState(conversations);
         if (!this.activeConversation() && conversations.length > 0) {
           this.selectConversation(conversations[0]);
         }
@@ -54,11 +60,13 @@ export class ChatPageComponent implements OnInit {
 
   startConversation(): void {
     this.errorMessage.set(null);
+    this.statusMessage.set(null);
     this.chatService.startConversation({ title: null }).subscribe({
       next: (conversation) => {
         this.conversations.update((current) => [conversation, ...current]);
         this.activeConversation.set(conversation);
         this.messages.set([]);
+        this.conversationHasTicket.set(conversation.hasTicket);
       },
       error: () => this.errorMessage.set('Could not start a conversation.'),
     });
@@ -67,11 +75,14 @@ export class ChatPageComponent implements OnInit {
   selectConversation(conversation: Conversation): void {
     this.activeConversation.set(conversation);
     this.messages.set([]);
+    this.conversationHasTicket.set(conversation.hasTicket);
+    this.statusMessage.set(null);
     this.loadMessages(conversation.id);
   }
 
   sendMessage(): void {
     this.errorMessage.set(null);
+    this.statusMessage.set(null);
     if (this.messageForm.invalid) {
       this.messageForm.markAllAsTouched();
       return;
@@ -86,8 +97,69 @@ export class ChatPageComponent implements OnInit {
     this.sendMessageToConversation(activeConversation.id, this.messageForm.getRawValue().content);
   }
 
+  createTicketForConversation(): void {
+    const message = this.latestUserMessage();
+    if (!message || this.isCreatingTicket() || this.conversationHasTicket()) {
+      return;
+    }
+
+    this.errorMessage.set(null);
+    this.statusMessage.set(null);
+    this.isCreatingTicket.set(true);
+
+    this.chatService.createTicketFromMessage(message.conversationId, message.id, {
+      title: this.buildConversationTitle(message.content),
+      description: message.content,
+      priority: 'Medium',
+    }).pipe(
+      finalize(() => this.isCreatingTicket.set(false)),
+    ).subscribe({
+      next: (ticket) => {
+        this.markActiveConversationHasTicket();
+        this.statusMessage.set(`Ticket created: ${ticket.title}`);
+      },
+      error: (error) => {
+        const status = error?.status;
+        if (status === 409) {
+          this.markActiveConversationHasTicket();
+          this.errorMessage.set('A ticket already exists for this conversation.');
+          return;
+        }
+
+        this.errorMessage.set('Could not create a ticket.');
+      },
+    });
+  }
+
   isActive(conversation: Conversation): boolean {
     return this.activeConversation()?.id === conversation.id;
+  }
+
+  private syncActiveConversationTicketState(conversations: Conversation[]): void {
+    const activeConversation = this.activeConversation();
+    if (!activeConversation) {
+      return;
+    }
+
+    const refreshed = conversations.find((conversation) => conversation.id === activeConversation.id);
+    if (refreshed) {
+      this.activeConversation.set(refreshed);
+      this.conversationHasTicket.set(refreshed.hasTicket);
+    }
+  }
+
+  private markActiveConversationHasTicket(): void {
+    const activeConversation = this.activeConversation();
+    if (!activeConversation) {
+      return;
+    }
+
+    const updatedConversation = { ...activeConversation, hasTicket: true };
+    this.activeConversation.set(updatedConversation);
+    this.conversationHasTicket.set(true);
+    this.conversations.update((current) =>
+      current.map((conversation) => conversation.id === updatedConversation.id ? updatedConversation : conversation),
+    );
   }
 
   private startAndSendMessage(): void {
@@ -99,6 +171,7 @@ export class ChatPageComponent implements OnInit {
         this.conversations.update((current) => [conversation, ...current]);
         this.activeConversation.set(conversation);
         this.messages.set([]);
+        this.conversationHasTicket.set(conversation.hasTicket);
         this.sendMessageToConversation(conversation.id, content);
       },
       error: () => {

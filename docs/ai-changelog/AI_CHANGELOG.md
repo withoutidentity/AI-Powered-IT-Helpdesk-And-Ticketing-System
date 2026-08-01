@@ -12,6 +12,102 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Simplify chat ticket button template
+
+**Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `@if` block inside the ticket action button with a single interpolation expression that chooses between `Ticket created`, `Creating...`, and `Create ticket`.
+
+**Why this approach:** The Angular compiler accepted the original template, but a simple interpolation is enough for this button label and is less likely to trigger editor/template tooling issues.
+
+**Alternatives considered:** Keeping the `@if` block was valid Angular syntax, but it was more structure than this label needed.
+
+**Follow-ups / risks:** None.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Expose conversation ticket state
+
+**Prompt/task summary:** Fix the chat-to-ticket UX so refresh/selecting a conversation immediately shows that its ticket already exists, instead of requiring the user to click and receive a conflict.
+
+**Files changed:**
+- `backend/src/Application/Chat/Models/ConversationDto.cs`
+- `backend/src/Application/Chat/Queries/GetConversations/GetConversationsQueryHandler.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+- `frontend/src/app/features/chat/data-access/chat.models.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+
+**What changed:** Added `hasTicket` to conversation list responses and populated it from tickets linked by `conversation_id`. The Chat page now initializes and refreshes its header button state from `conversation.hasTicket`, and still marks the active conversation locally after successful ticket creation.
+
+**Why this approach:** The UI should not rely on a failed create request to discover existing state. Returning ticket state with conversations keeps the conversation-level invariant visible to clients without requiring an extra request per selected conversation.
+
+**Alternatives considered:** Calling the create endpoint and handling `409` as normal control flow was rejected because it creates a poor user experience and unnecessary failed writes. Adding a separate ticket-status endpoint was deferred because the conversation list already has the relevant scope.
+
+**Follow-ups / risks:** When ticket detail/list endpoints exist, `hasTicket` can be expanded to include a `ticketId` so the header can link directly to the created ticket.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Make chat ticket handoff conversation-scoped
+
+**Prompt/task summary:** Change ticket creation so each conversation can create only one ticket, and move the frontend `Create ticket` action from individual message bubbles to the chat panel header.
+
+**Files changed:**
+- `backend/src/Application/Chat/Commands/CreateTicketFromMessage/CreateTicketFromMessageCommandHandler.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ER_DIAGRAM.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+
+**What changed:** The backend duplicate check now uses `conversation_id` instead of `message_id`, enforcing one ticket per conversation. The frontend now renders a single conversation-level `Create ticket` button in the message panel header and creates the ticket from the latest user message in the active conversation.
+
+**Why this approach:** A conversation-level handoff better matches the product workflow: a support conversation represents one issue context, while messages are just the supporting evidence. Keeping `message_id` still preserves traceability to the specific user message used as the trigger.
+
+**Alternatives considered:** Keeping per-message ticket creation was rejected because one conversation could generate multiple duplicate tickets. Adding a separate conversation-only backend endpoint was deferred because the current endpoint already links both conversation and originating message and can enforce the conversation-scoped invariant.
+
+**Follow-ups / risks:** Persisted UI awareness of existing tickets still needs a conversation/ticket summary endpoint so the header button can show `Ticket created` immediately after refresh instead of learning it from a `409` response.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend chat-to-ticket handoff
+
+**Prompt/task summary:** Continue the recommended Phase 3 flow by wiring the frontend Chat page to the backend create-ticket-from-message endpoint.
+
+**Files changed:**
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+- `frontend/src/app/features/chat/data-access/chat.models.ts`
+- `frontend/src/app/features/chat/data-access/chat.service.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+
+**What changed:** Added frontend ticket DTO/request types, a `ChatService.createTicketFromMessage` method, and a `Create ticket` action on user message bubbles. The component now handles per-message creating state, success feedback, duplicate-ticket conflict feedback, and hides the action for assistant messages.
+
+**Why this approach:** This completes the manual chat-to-ticket handoff before AI intent classification. Keeping the action attached to the originating user message preserves context and maps directly to the backend endpoint that links tickets to `conversationId` and `messageId`.
+
+**Alternatives considered:** Adding a full modal for title/priority editing was deferred because the current slice is about wiring the flow end to end. The default title/description from message content keeps the UI small while still exercising the real backend path.
+
+**Follow-ups / risks:** Add ticket list/detail UI next so users can navigate to the created ticket. Later, AI intent classification can call the same backend flow automatically for `Action` messages.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Create tickets from chat messages
 
 **Prompt/task summary:** Continue Phase 3 by adding backend ticket creation from a persisted chat message before AI intent/RAG automation.
@@ -39,7 +135,7 @@ Newest entries at the top.
 
 **Follow-ups / risks:** Add ticket list/detail/status endpoints and frontend ticket handoff UI next. Discord notification should be introduced later with a notifier abstraction and should not block ticket creation.
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
 
 ---
 ## [2026-08-01] Load local configuration from env files
@@ -66,7 +162,7 @@ Newest entries at the top.
 
 **Follow-ups / risks:** Existing PostgreSQL volumes keep their original database password until changed inside Postgres with `ALTER USER` or the volume is recreated. Do not commit any real `.env` file.
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
 
 ---
 ## [2026-07-31] Replace chat panel row grid with flexbox
@@ -85,10 +181,29 @@ Newest entries at the top.
 
 **Follow-ups / risks:** The earlier changelog entries about the failed grid/padding attempts are intentionally left as history, but this entry supersedes them as the final working layout decision.
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
 
 ---
 
+## [2026-08-01] Simplify chat ticket button template
+
+**Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `@if` block inside the ticket action button with a single interpolation expression that chooses between `Ticket created`, `Creating...`, and `Create ticket`.
+
+**Why this approach:** The Angular compiler accepted the original template, but a simple interpolation is enough for this button label and is less likely to trigger editor/template tooling issues.
+
+**Alternatives considered:** Keeping the `@if` block was valid Angular syntax, but it was more structure than this label needed.
+
+**Follow-ups / risks:** None.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-07-31] Make chat composer visible
 
 **Prompt/task summary:** Fix the composer tray after the previous spacing change hid the message input.
@@ -105,10 +220,29 @@ Newest entries at the top.
 
 **Follow-ups / risks:** The send button can be changed to an icon button later if the UI moves closer to a Codex-style composer.
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
 
 ---
 
+## [2026-08-01] Simplify chat ticket button template
+
+**Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `@if` block inside the ticket action button with a single interpolation expression that chooses between `Ticket created`, `Creating...`, and `Create ticket`.
+
+**Why this approach:** The Angular compiler accepted the original template, but a simple interpolation is enough for this button label and is less likely to trigger editor/template tooling issues.
+
+**Alternatives considered:** Keeping the `@if` block was valid Angular syntax, but it was more structure than this label needed.
+
+**Follow-ups / risks:** None.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-07-31] Adjust chat composer spacing
 
 **Prompt/task summary:** Match the requested chat composer layout by adding the larger bottom tray spacing shown in the reference image.
@@ -125,10 +259,29 @@ Newest entries at the top.
 
 **Follow-ups / risks:** If the user wants the composer visually closer to Codex exactly, the next refinement should tune width, border radius, and icon-style send affordance separately.
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
 
 ---
 
+## [2026-08-01] Simplify chat ticket button template
+
+**Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `@if` block inside the ticket action button with a single interpolation expression that chooses between `Ticket created`, `Creating...`, and `Create ticket`.
+
+**Why this approach:** The Angular compiler accepted the original template, but a simple interpolation is enough for this button label and is less likely to trigger editor/template tooling issues.
+
+**Alternatives considered:** Keeping the `@if` block was valid Angular syntax, but it was more structure than this label needed.
+
+**Follow-ups / risks:** None.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-07-30] Pin chat composer to bottom
 
 **Prompt/task summary:** Adjust the chat UI so the message composer sits at the bottom like the assistant UI, while older messages are reviewed by scrolling upward.
@@ -148,10 +301,29 @@ Newest entries at the top.
 
 **Follow-ups / risks:** If the authenticated shell gets more fixed header/tool areas later, keep those areas as flex children instead of returning to viewport-height guesses.
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
 
 ---
 
+## [2026-08-01] Simplify chat ticket button template
+
+**Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `@if` block inside the ticket action button with a single interpolation expression that chooses between `Ticket created`, `Creating...`, and `Create ticket`.
+
+**Why this approach:** The Angular compiler accepted the original template, but a simple interpolation is enough for this button label and is less likely to trigger editor/template tooling issues.
+
+**Alternatives considered:** Keeping the `@if` block was valid Angular syntax, but it was more structure than this label needed.
+
+**Follow-ups / risks:** None.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-07-30] Connect frontend chat to backend API
 
 **Prompt/task summary:** Continue in the recommended order by wiring the frontend chat page to the existing backend chat happy-path API.
@@ -174,10 +346,29 @@ Newest entries at the top.
 
 **Follow-ups / risks:** Add component/service tests around chat interactions when the frontend test harness expands beyond the root app smoke tests. Next backend slice should add ticket creation from messages before AI intent classification.
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
 
 ---
 
+## [2026-08-01] Simplify chat ticket button template
+
+**Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `@if` block inside the ticket action button with a single interpolation expression that chooses between `Ticket created`, `Creating...`, and `Create ticket`.
+
+**Why this approach:** The Angular compiler accepted the original template, but a simple interpolation is enough for this button label and is less likely to trigger editor/template tooling issues.
+
+**Alternatives considered:** Keeping the `@if` block was valid Angular syntax, but it was more structure than this label needed.
+
+**Follow-ups / risks:** None.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-07-30] Record RAG teaching preference
 
 **Prompt/task summary:** The user asked to remember that any future RAG pipeline, KB docs/chunks, or vector work must include detailed step-by-step teaching.
@@ -194,10 +385,29 @@ Newest entries at the top.
 
 **Follow-ups / risks:** Future agents still need to read and obey `AGENTS.md` before starting RAG-related work.
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
 
 ---
 
+## [2026-08-01] Simplify chat ticket button template
+
+**Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `@if` block inside the ticket action button with a single interpolation expression that chooses between `Ticket created`, `Creating...`, and `Create ticket`.
+
+**Why this approach:** The Angular compiler accepted the original template, but a simple interpolation is enough for this button label and is less likely to trigger editor/template tooling issues.
+
+**Alternatives considered:** Keeping the `@if` block was valid Angular syntax, but it was more structure than this label needed.
+
+**Follow-ups / risks:** None.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-07-30] Add chat happy path and ticket attachment metadata
 
 **Prompt/task summary:** Explain when KB docs/chunks/vector should be implemented, add ticket support for attachments, and start Phase 3 backend chat happy path without AI.
@@ -230,10 +440,29 @@ Newest entries at the top.
 
 **Follow-ups / risks:** Add real upload storage and validation before exposing attachment upload UI. Replace the canned assistant response with intent classification/RAG streaming in the AI slices. Add integration tests around JWT-protected chat endpoints when the API test project exists.
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
 
 ---
 
+## [2026-08-01] Simplify chat ticket button template
+
+**Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `@if` block inside the ticket action button with a single interpolation expression that chooses between `Ticket created`, `Creating...`, and `Create ticket`.
+
+**Why this approach:** The Angular compiler accepted the original template, but a simple interpolation is enough for this button label and is less likely to trigger editor/template tooling issues.
+
+**Alternatives considered:** Keeping the `@if` block was valid Angular syntax, but it was more structure than this label needed.
+
+**Follow-ups / risks:** None.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-07-30] Add Phase 2 core ticketing data model
 
 **Prompt/task summary:** Start Phase 2 by adding the core backend data model for conversations, messages, tickets, and ticket comments in one focused slice.
@@ -266,10 +495,29 @@ Newest entries at the top.
 
 **Follow-ups / risks:** Apply the migration to any non-local database before using upcoming chat/ticket endpoints. The next slice should add Application repositories/use cases and API endpoints for the chat happy path.
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
 
 ---
 
+## [2026-08-01] Simplify chat ticket button template
+
+**Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `@if` block inside the ticket action button with a single interpolation expression that chooses between `Ticket created`, `Creating...`, and `Create ticket`.
+
+**Why this approach:** The Angular compiler accepted the original template, but a simple interpolation is enough for this button label and is less likely to trigger editor/template tooling issues.
+
+**Alternatives considered:** Keeping the `@if` block was valid Angular syntax, but it was more structure than this label needed.
+
+**Follow-ups / risks:** None.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-07-30] Remove browser default page margin
 
 **Prompt/task summary:** The white border still appeared around the whole authenticated app after removing the placeholder card frame.
@@ -286,10 +534,29 @@ Newest entries at the top.
 
 **Follow-ups / risks:** None for this layout fix.
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
 
 ---
 
+## [2026-08-01] Simplify chat ticket button template
+
+**Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `@if` block inside the ticket action button with a single interpolation expression that chooses between `Ticket created`, `Creating...`, and `Create ticket`.
+
+**Why this approach:** The Angular compiler accepted the original template, but a simple interpolation is enough for this button label and is less likely to trigger editor/template tooling issues.
+
+**Alternatives considered:** Keeping the `@if` block was valid Angular syntax, but it was more structure than this label needed.
+
+**Follow-ups / risks:** None.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-07-30] Remove placeholder page frame
 
 **Prompt/task summary:** Remove the white framed placeholder panel shown after login so the protected workspace content does not look like a full-page card.
@@ -306,10 +573,29 @@ Newest entries at the top.
 
 **Follow-ups / risks:** Replace this temporary placeholder with the real chat workspace in the next slice.
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
 
 ---
 
+## [2026-08-01] Simplify chat ticket button template
+
+**Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `@if` block inside the ticket action button with a single interpolation expression that chooses between `Ticket created`, `Creating...`, and `Create ticket`.
+
+**Why this approach:** The Angular compiler accepted the original template, but a simple interpolation is enough for this button label and is less likely to trigger editor/template tooling issues.
+
+**Alternatives considered:** Keeping the `@if` block was valid Angular syntax, but it was more structure than this label needed.
+
+**Follow-ups / risks:** None.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-07-30] Fix frontend auth CORS and register feedback
 
 **Prompt/task summary:** Login failed in the browser with a CORS preflight error, while Postman worked; the register button also appeared to do nothing.
@@ -331,10 +617,29 @@ Newest entries at the top.
 
 **Follow-ups / risks:** Add environment-specific CORS values when deployment origins are known. The frontend still uses localStorage token storage for the dev slice and should be revisited before production.
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
 
 ---
 
+## [2026-08-01] Simplify chat ticket button template
+
+**Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `@if` block inside the ticket action button with a single interpolation expression that chooses between `Ticket created`, `Creating...`, and `Create ticket`.
+
+**Why this approach:** The Angular compiler accepted the original template, but a simple interpolation is enough for this button label and is less likely to trigger editor/template tooling issues.
+
+**Alternatives considered:** Keeping the `@if` block was valid Angular syntax, but it was more structure than this label needed.
+
+**Follow-ups / risks:** None.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-07-30] Add frontend auth flow
 
 **Prompt/task summary:** Continue Phase 1 by adding frontend login/register pages, auth service, token storage, HTTP interceptor, and route guard.
@@ -359,10 +664,29 @@ Newest entries at the top.
 
 **Follow-ups / risks:** Token storage is developer-oriented and should be revisited before production. Add logout/revoke support on the backend, then extend the interceptor to handle one-shot refresh on `401` responses.
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
 
 ---
 
+## [2026-08-01] Simplify chat ticket button template
+
+**Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `@if` block inside the ticket action button with a single interpolation expression that chooses between `Ticket created`, `Creating...`, and `Create ticket`.
+
+**Why this approach:** The Angular compiler accepted the original template, but a simple interpolation is enough for this button label and is less likely to trigger editor/template tooling issues.
+
+**Alternatives considered:** Keeping the `@if` block was valid Angular syntax, but it was more structure than this label needed.
+
+**Follow-ups / risks:** None.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-07-30] Persist and rotate refresh tokens
 
 **Prompt/task summary:** Continue Phase 1 after the .NET 10 migration by implementing the next auth slice: persisted refresh tokens and the `/api/v1/auth/refresh` endpoint.
@@ -397,10 +721,29 @@ Newest entries at the top.
 
 **Follow-ups / risks:** There is no logout/revoke endpoint yet, and there is no cleanup job for expired refresh-token rows. Add those before treating auth as production-complete.
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
 
 ---
 
+## [2026-08-01] Simplify chat ticket button template
+
+**Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `@if` block inside the ticket action button with a single interpolation expression that chooses between `Ticket created`, `Creating...`, and `Create ticket`.
+
+**Why this approach:** The Angular compiler accepted the original template, but a simple interpolation is enough for this button label and is less likely to trigger editor/template tooling issues.
+
+**Alternatives considered:** Keeping the `@if` block was valid Angular syntax, but it was more structure than this label needed.
+
+**Follow-ups / risks:** None.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-07-30] Migrate backend to .NET 10
 
 **Prompt/task summary:** Change the backend from .NET 8 to .NET 10 before continuing Phase 1, and update the project documents.
@@ -423,10 +766,29 @@ Newest entries at the top.
 
 **Follow-ups / risks:** Existing EF migration files still show their original generator `ProductVersion` metadata from EF 8; that is historical migration metadata and should update naturally on the next generated migration. Re-run API smoke tests after the next auth slice if refresh-token persistence changes runtime behavior.
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
 
 ---
 
+## [2026-08-01] Simplify chat ticket button template
+
+**Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `@if` block inside the ticket action button with a single interpolation expression that chooses between `Ticket created`, `Creating...`, and `Create ticket`.
+
+**Why this approach:** The Angular compiler accepted the original template, but a simple interpolation is enough for this button label and is less likely to trigger editor/template tooling issues.
+
+**Alternatives considered:** Keeping the `@if` block was valid Angular syntax, but it was more structure than this label needed.
+
+**Follow-ups / risks:** None.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-07-30] Implement backend auth foundation
 
 **Prompt/task summary:** Start Phase 1 slice one by adding backend dependencies, register/login endpoints, and the initial `users` table.
@@ -468,10 +830,29 @@ Newest entries at the top.
 
 **Follow-ups / risks:** Refresh tokens are generated in the login response but are not yet persisted or rotatable; implement refresh-token storage before enabling `POST /auth/refresh`. This local runtime mismatch was later superseded by the .NET 10 backend migration entry above. The smoke test created and then removed a temporary `smoke.*` user from the dev database.
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
 
 ---
 
+## [2026-08-01] Simplify chat ticket button template
+
+**Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `@if` block inside the ticket action button with a single interpolation expression that chooses between `Ticket created`, `Creating...`, and `Create ticket`.
+
+**Why this approach:** The Angular compiler accepted the original template, but a simple interpolation is enough for this button label and is less likely to trigger editor/template tooling issues.
+
+**Alternatives considered:** Keeping the `@if` block was valid Angular syntax, but it was more structure than this label needed.
+
+**Follow-ups / risks:** None.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-07-30] Fix pgAdmin default email placeholder
 
 **Prompt/task summary:** pgAdmin failed to start because `admin@helpdesk.local` was rejected as an invalid default email, and PostgreSQL client connection testing showed password authentication failures.
@@ -490,10 +871,29 @@ Newest entries at the top.
 
 **Follow-ups / risks:** If a desktop database client still fails authentication, clear any saved password for that connection and recreate it with host `localhost`, port `5432`, database `helpdesk`, username `helpdesk`, and password `<redacted-dev-db-password>`.
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
 
 ---
 
+## [2026-08-01] Simplify chat ticket button template
+
+**Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `@if` block inside the ticket action button with a single interpolation expression that chooses between `Ticket created`, `Creating...`, and `Create ticket`.
+
+**Why this approach:** The Angular compiler accepted the original template, but a simple interpolation is enough for this button label and is less likely to trigger editor/template tooling issues.
+
+**Alternatives considered:** Keeping the `@if` block was valid Angular syntax, but it was more structure than this label needed.
+
+**Follow-ups / risks:** None.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-07-30] Add pgAdmin for local database inspection
 
 **Prompt/task summary:** Add pgAdmin4 to Docker Compose so PostgreSQL data can be inspected through a browser UI instead of using CLI commands.
@@ -512,10 +912,29 @@ Newest entries at the top.
 
 **Follow-ups / risks:** The default pgAdmin and database passwords are development placeholders only; replace them in a real `.env` before exposing the compose stack beyond local development. The API/web/nginx services are still documented as planned compose services but not yet implemented in `docker-compose.yml`.
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
 
 ---
 
+## [2026-08-01] Simplify chat ticket button template
+
+**Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `@if` block inside the ticket action button with a single interpolation expression that chooses between `Ticket created`, `Creating...`, and `Create ticket`.
+
+**Why this approach:** The Angular compiler accepted the original template, but a simple interpolation is enough for this button label and is less likely to trigger editor/template tooling issues.
+
+**Alternatives considered:** Keeping the `@if` block was valid Angular syntax, but it was more structure than this label needed.
+
+**Follow-ups / risks:** None.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-07-30] Move backend into dedicated folder
 
 **Prompt/task summary:** Clarify whether Docker must be run now and whether backend API
@@ -563,10 +982,29 @@ because it would require noisier `backend/src/...` project paths inside the solu
 `backend/HelpdeskTicketingSystem.slnx`. Docker still only starts the pgvector database;
 API/web containers are a later compose expansion.
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
 
 ---
 
+## [2026-08-01] Simplify chat ticket button template
+
+**Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `@if` block inside the ticket action button with a single interpolation expression that chooses between `Ticket created`, `Creating...`, and `Create ticket`.
+
+**Why this approach:** The Angular compiler accepted the original template, but a simple interpolation is enough for this button label and is less likely to trigger editor/template tooling issues.
+
+**Alternatives considered:** Keeping the `@if` block was valid Angular syntax, but it was more structure than this label needed.
+
+**Follow-ups / risks:** None.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-07-30] Scaffold phase 0 project structure
 
 **Prompt/task summary:** Read the repository instructions, follow them strictly, and
@@ -646,10 +1084,29 @@ no test projects because no business behavior has been implemented yet. The repo
 git root is `D:/project`, so status output includes unrelated sibling projects unless
 commands are scoped to this directory.
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
 
 ---
 
+## [2026-08-01] Simplify chat ticket button template
+
+**Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `@if` block inside the ticket action button with a single interpolation expression that chooses between `Ticket created`, `Creating...`, and `Create ticket`.
+
+**Why this approach:** The Angular compiler accepted the original template, but a simple interpolation is enough for this button label and is less likely to trigger editor/template tooling issues.
+
+**Alternatives considered:** Keeping the `@if` block was valid Angular syntax, but it was more structure than this label needed.
+
+**Follow-ups / risks:** None.
+
+**Reviewed by human:** [ ]
+
+---
 ## [YYYY-MM-DD] <short task title>
 
 **Prompt/task summary:** what was asked
@@ -667,10 +1124,29 @@ over alternatives, any constraints from `docs/PROJECT_PLAN.md` that drove the de
 
 **Follow-ups / risks:** anything a human should double-check
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
 
 ---
 
+## [2026-08-01] Simplify chat ticket button template
+
+**Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `@if` block inside the ticket action button with a single interpolation expression that chooses between `Ticket created`, `Creating...`, and `Create ticket`.
+
+**Why this approach:** The Angular compiler accepted the original template, but a simple interpolation is enough for this button label and is less likely to trigger editor/template tooling issues.
+
+**Alternatives considered:** Keeping the `@if` block was valid Angular syntax, but it was more structure than this label needed.
+
+**Follow-ups / risks:** None.
+
+**Reviewed by human:** [ ]
+
+---
 ## Example entry (for reference - delete once the first real entry is added)
 
 ## [2026-07-29] Scaffold ticket status transition validation
@@ -704,4 +1180,7 @@ approach, which is both testable and framework-agnostic.
 **Follow-ups / risks:** None currently. If a "bulk reopen" admin feature is added later,
 revisit whether the transition graph needs an `Admin` override path.
 
-**Reviewed by human:** ☐
+**Reviewed by human:** [ ]
+
+
+

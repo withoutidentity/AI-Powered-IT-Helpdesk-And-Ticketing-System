@@ -2,7 +2,15 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Conversation, Message, SendMessageRequest, SendMessageResponse, StartConversationRequest } from './chat.models';
+import {
+  Conversation,
+  CreateTicketFromMessageRequest,
+  Message,
+  SendMessageRequest,
+  SendMessageResponse,
+  StartConversationRequest,
+  Ticket,
+} from './chat.models';
 
 @Injectable({ providedIn: 'root' })
 export class ChatService {
@@ -23,5 +31,13 @@ export class ChatService {
 
   sendMessage(conversationId: string, request: SendMessageRequest): Observable<SendMessageResponse> {
     return this.http.post<SendMessageResponse>(`${this.baseUrl}/conversations/${conversationId}/messages`, request);
+  }
+
+  createTicketFromMessage(
+    conversationId: string,
+    messageId: string,
+    request: CreateTicketFromMessageRequest,
+  ): Observable<Ticket> {
+    return this.http.post<Ticket>(`${this.baseUrl}/conversations/${conversationId}/messages/${messageId}/ticket`, request);
   }
 }

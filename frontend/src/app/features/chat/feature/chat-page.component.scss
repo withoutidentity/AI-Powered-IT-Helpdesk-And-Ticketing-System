@@ -45,6 +45,18 @@
   flex: 0 0 auto;
 }
 
+.ticket-action {
+  border: 1px solid #b9c9dd;
+  background: #ffffff;
+  color: #1d2733;
+  white-space: nowrap;
+}
+
+.ticket-action:not(:disabled):hover {
+  border-color: #2764d8;
+  color: #17499f;
+}
+
 .border-bottom {
   border-bottom: 1px solid #d8e0ea;
 }
@@ -127,15 +139,19 @@ button:disabled {
   padding: 0;
 }
 
-.error-message {
+.error-message,
+.status-message {
   flex: 0 0 auto;
   margin: 0 16px;
   border-radius: 6px;
   padding: 10px 12px;
-  background: #fff1f0;
-  color: #a1281f;
   font-size: 0.9rem;
   font-weight: 700;
+}
+
+.error-message {
+  background: #fff1f0;
+  color: #a1281f;
 }
 
 .message-list {
@@ -166,6 +182,11 @@ button:disabled {
   border-radius: 8px;
   padding: 12px;
   line-height: 1.45;
+}
+
+.status-message {
+  background: #ecfdf3;
+  color: #146c43;
 }
 
 .message span {
