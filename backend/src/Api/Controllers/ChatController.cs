@@ -1,3 +1,4 @@
+using Application.Chat.Commands.CreateTicketFromMessage;
 using Application.Chat.Commands.SendMessage;
 using Application.Chat.Commands.StartConversation;
 using Application.Chat.Queries.GetConversations;
@@ -74,6 +75,34 @@ public sealed class ChatController : ControllerBase
         return Ok(result.Value);
     }
 
+    [HttpPost("conversations/{conversationId:guid}/messages/{messageId:guid}/ticket")]
+    public async Task<IActionResult> CreateTicketFromMessage(
+        Guid conversationId,
+        Guid messageId,
+        CreateTicketFromMessageRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(
+            new CreateTicketFromMessageCommand(conversationId, messageId, request.Title, request.Description, request.Priority),
+            cancellationToken);
+
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                "ConversationNotFound" => NotFoundProblem(result.ErrorMessage!),
+                "MessageNotFound" => NotFoundProblem(result.ErrorMessage!),
+                "Forbidden" => ForbiddenProblem(result.ErrorMessage!),
+                "TicketAlreadyExists" => ConflictProblem(result.ErrorMessage!),
+                "InvalidMessage" => BadRequestProblem(result.ErrorMessage!),
+                "ValidationFailed" => ValidationProblem(result.ErrorMessage!),
+                _ => BadRequestProblem(result.ErrorMessage!)
+            };
+        }
+
+        return Created($"/api/v1/tickets/{result.Value!.Id}", result.Value);
+    }
+
     private IActionResult BadRequestProblem(string detail)
     {
         return Problem(title: "Bad request", detail: detail, statusCode: StatusCodes.Status400BadRequest);
@@ -89,6 +118,11 @@ public sealed class ChatController : ControllerBase
         return Problem(title: "Not found", detail: detail, statusCode: StatusCodes.Status404NotFound);
     }
 
+    private IActionResult ConflictProblem(string detail)
+    {
+        return Problem(title: "Conflict", detail: detail, statusCode: StatusCodes.Status409Conflict);
+    }
+
     private IActionResult ForbiddenProblem(string detail)
     {
         return Problem(title: "Forbidden", detail: detail, statusCode: StatusCodes.Status403Forbidden);
@@ -98,3 +132,5 @@ public sealed class ChatController : ControllerBase
 public sealed record StartConversationRequest(string? Title);
 
 public sealed record SendMessageRequest(string Content);
+
+public sealed record CreateTicketFromMessageRequest(string? Title, string? Description, string? Priority);

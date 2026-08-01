@@ -1,9 +1,12 @@
 using System.Text;
+using Api.Configuration;
 using Api.Services;
 using Application.Common.Interfaces;
 using CompositionRoot;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+
+DotEnvLoader.LoadBackendEnvironment();
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -13,6 +13,11 @@ public sealed class MessageRepository : IMessageRepository
         _dbContext = dbContext;
     }
 
+    public Task<Message?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
+    {
+        return _dbContext.Messages.FirstOrDefaultAsync(message => message.Id == id, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Message>> ListByConversationAsync(Guid conversationId, CancellationToken cancellationToken)
     {
         return await _dbContext.Messages

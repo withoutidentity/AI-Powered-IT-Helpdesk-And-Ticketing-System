@@ -1,3 +1,4 @@
+using Application.Chat.Commands.CreateTicketFromMessage;
 using Application.Chat.Commands.SendMessage;
 using Application.Chat.Commands.StartConversation;
 using Application.Chat.Queries.GetConversations;
@@ -107,6 +108,108 @@ public sealed class ChatCommandHandlerTests
         result.Value[1].Content.Should().Be("Second");
     }
 
+
+    [Fact]
+    public async Task CreateTicketFromMessage_UserMessage_CreatesOpenTicketLinkedToMessage()
+    {
+        var currentUserId = Guid.NewGuid();
+        var conversation = Conversation.Start(currentUserId, "Printer", DateTimeOffset.UtcNow.AddMinutes(-2));
+        var message = conversation.AddMessage(MessageSender.User, " The printer is jammed on floor 3. ", null, DateTimeOffset.UtcNow.AddMinutes(-1));
+        var conversations = new FakeConversationRepository();
+        conversations.Items.Add(conversation);
+        var messages = new FakeMessageRepository();
+        messages.Items.Add(message);
+        var tickets = new FakeTicketRepository();
+        var unitOfWork = new FakeUnitOfWork();
+        var handler = new CreateTicketFromMessageCommandHandler(
+            new FakeCurrentUserService(currentUserId),
+            conversations,
+            messages,
+            tickets,
+            unitOfWork);
+
+        var result = await handler.Handle(
+            new CreateTicketFromMessageCommand(conversation.Id, message.Id, " Printer jam ", null, "High"),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        tickets.Items.Should().ContainSingle();
+        tickets.Items[0].MessageId.Should().Be(message.Id);
+        tickets.Items[0].ConversationId.Should().Be(conversation.Id);
+        tickets.Items[0].CreatedBy.Should().Be(currentUserId);
+        tickets.Items[0].Title.Should().Be("Printer jam");
+        tickets.Items[0].Description.Should().Be("The printer is jammed on floor 3.");
+        tickets.Items[0].Priority.Should().Be(TicketPriority.High);
+        result.Value!.Status.Should().Be("Open");
+        unitOfWork.SaveCalls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task CreateTicketFromMessage_OtherUsersConversation_ReturnsForbidden()
+    {
+        var conversation = Conversation.Start(Guid.NewGuid(), "Other", DateTimeOffset.UtcNow);
+        var conversations = new FakeConversationRepository();
+        conversations.Items.Add(conversation);
+        var handler = new CreateTicketFromMessageCommandHandler(
+            new FakeCurrentUserService(Guid.NewGuid()),
+            conversations,
+            new FakeMessageRepository(),
+            new FakeTicketRepository(),
+            new FakeUnitOfWork());
+
+        var result = await handler.Handle(new CreateTicketFromMessageCommand(conversation.Id, Guid.NewGuid(), null, null, null), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be("Forbidden");
+    }
+
+    [Fact]
+    public async Task CreateTicketFromMessage_AssistantMessage_ReturnsInvalidMessage()
+    {
+        var currentUserId = Guid.NewGuid();
+        var conversation = Conversation.Start(currentUserId, "Help", DateTimeOffset.UtcNow.AddMinutes(-2));
+        var message = conversation.AddMessage(MessageSender.Assistant, "Assistant response", null, DateTimeOffset.UtcNow.AddMinutes(-1));
+        var conversations = new FakeConversationRepository();
+        conversations.Items.Add(conversation);
+        var messages = new FakeMessageRepository();
+        messages.Items.Add(message);
+        var handler = new CreateTicketFromMessageCommandHandler(
+            new FakeCurrentUserService(currentUserId),
+            conversations,
+            messages,
+            new FakeTicketRepository(),
+            new FakeUnitOfWork());
+
+        var result = await handler.Handle(new CreateTicketFromMessageCommand(conversation.Id, message.Id, null, null, null), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be("InvalidMessage");
+    }
+
+    [Fact]
+    public async Task CreateTicketFromMessage_ExistingTicketForMessage_ReturnsConflict()
+    {
+        var currentUserId = Guid.NewGuid();
+        var conversation = Conversation.Start(currentUserId, "Help", DateTimeOffset.UtcNow.AddMinutes(-2));
+        var message = conversation.AddMessage(MessageSender.User, "Need help", null, DateTimeOffset.UtcNow.AddMinutes(-1));
+        var conversations = new FakeConversationRepository();
+        conversations.Items.Add(conversation);
+        var messages = new FakeMessageRepository();
+        messages.Items.Add(message);
+        var tickets = new FakeTicketRepository();
+        tickets.Items.Add(Ticket.Create(conversation.Id, message.Id, currentUserId, "Need help", "Need help", DateTimeOffset.UtcNow));
+        var handler = new CreateTicketFromMessageCommandHandler(
+            new FakeCurrentUserService(currentUserId),
+            conversations,
+            messages,
+            tickets,
+            new FakeUnitOfWork());
+
+        var result = await handler.Handle(new CreateTicketFromMessageCommand(conversation.Id, message.Id, null, null, null), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be("TicketAlreadyExists");
+    }
     private sealed class FakeCurrentUserService : ICurrentUserService
     {
         public FakeCurrentUserService(Guid userId)
@@ -147,6 +250,11 @@ public sealed class ChatCommandHandlerTests
     {
         public List<Message> Items { get; } = new();
 
+        public Task<Message?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(Items.FirstOrDefault(message => message.Id == id));
+        }
+
         public Task<IReadOnlyList<Message>> ListByConversationAsync(Guid conversationId, CancellationToken cancellationToken)
         {
             IReadOnlyList<Message> result = Items
@@ -164,6 +272,22 @@ public sealed class ChatCommandHandlerTests
         }
     }
 
+
+    private sealed class FakeTicketRepository : ITicketRepository
+    {
+        public List<Ticket> Items { get; } = new();
+
+        public Task<Ticket?> GetByMessageIdAsync(Guid messageId, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(Items.FirstOrDefault(ticket => ticket.MessageId == messageId));
+        }
+
+        public Task AddAsync(Ticket ticket, CancellationToken cancellationToken)
+        {
+            Items.Add(ticket);
+            return Task.CompletedTask;
+        }
+    }
     private sealed class FakeUnitOfWork : IUnitOfWork
     {
         public int SaveCalls { get; private set; }

@@ -123,6 +123,8 @@ self-contained demo/dev flow.
 
 ## 2. Chat
 
+> **Frontend chat implementation note:** the Angular Chat route currently consumes these no-AI JSON endpoints directly. Streaming and RAG source citations are future AI/RAG slice behavior.
+
 ### `POST /chat/conversations`
 Starts a new conversation for the authenticated user.
 
@@ -226,6 +228,41 @@ Sends a user message and returns the persisted user message plus a canned assist
 ```
 
 **Future streaming response (AI slice):** this endpoint will switch to SSE frames for `intent`, `token`, optional `sources`, and `done` once Groq streaming and RAG are implemented.
+---
+
+### `POST /chat/conversations/{conversationId}/messages/{messageId}/ticket`
+Creates a ticket from a persisted user message in the current no-AI/manual handoff slice. This is the explicit version of the future AI `Action` intent path.
+
+**Auth required:** Yes - must be the conversation owner.
+
+**Request** *(all fields optional; title/description default from the message content, priority defaults to `Medium`)*
+```json
+{
+  "title": "Printer jammed - Floor 3",
+  "description": "The printer on floor 3 is jammed, can someone take a look?",
+  "priority": "High"
+}
+```
+
+**Response `201 Created`**
+```json
+{
+  "id": "t1042...",
+  "conversationId": "c1a2b3c4-...",
+  "messageId": "m1...",
+  "createdBy": "b3f1e2a0-...",
+  "assignedTo": null,
+  "title": "Printer jammed - Floor 3",
+  "description": "The printer on floor 3 is jammed, can someone take a look?",
+  "status": "Open",
+  "priority": "High",
+  "createdAt": "2026-08-01T09:00:00Z",
+  "updatedAt": "2026-08-01T09:00:00Z",
+  "attachmentsJson": "[]"
+}
+```
+
+**Errors:** `403` not the conversation owner, `404` conversation/message not found, `400` assistant message or invalid priority, `409` ticket already exists for the message
 
 **Errors:** `403` not the conversation owner, `404` conversation not found, `429` rate limited, `502` upstream AI provider error after AI integration is enabled
 

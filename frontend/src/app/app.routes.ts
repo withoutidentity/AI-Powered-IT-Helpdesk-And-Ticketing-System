@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
 import { LoginPageComponent } from './features/auth/feature/login-page.component';
 import { RegisterPageComponent } from './features/auth/feature/register-page.component';
+import { ChatPageComponent } from './features/chat/feature/chat-page.component';
 import { PlaceholderPageComponent } from './features/dashboard/feature/placeholder-page.component';
 
 export const routes: Routes = [
@@ -15,13 +16,8 @@ export const routes: Routes = [
   },
   {
     path: '',
-    component: PlaceholderPageComponent,
+    component: ChatPageComponent,
     canActivate: [authGuard],
-    data: {
-      eyebrow: 'Support chat',
-      title: 'Chat workspace',
-      summary: 'Ask IT questions, track support context, and continue into ticket creation when an issue needs human follow-up.',
-    },
   },
   {
     path: 'tickets',

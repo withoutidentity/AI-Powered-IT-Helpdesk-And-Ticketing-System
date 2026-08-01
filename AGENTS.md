@@ -77,6 +77,15 @@ changes into a single log entry.
 
 ---
 
+## 3.1 RAG / KB teaching preference
+
+When work touches the RAG pipeline, knowledge-base documents/chunks, embeddings, vector
+columns/indexes, pgvector search, or retrieval quality, explain the concept and the code
+step by step in Thai. The user explicitly wants to learn this area deeply, so do not only
+implement the change: teach the why, the data flow, the schema choices, the trade-offs,
+and how to test/debug it manually.
+---
+
 ## 4. Where things live (quick reference)
 
 | Need to... | Look at / put it in |

@@ -12,6 +12,192 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Create tickets from chat messages
+
+**Prompt/task summary:** Continue Phase 3 by adding backend ticket creation from a persisted chat message before AI intent/RAG automation.
+
+**Files changed:**
+- `backend/src/Api/Controllers/ChatController.cs`
+- `backend/src/Application/Chat/Commands/CreateTicketFromMessage/CreateTicketFromMessageCommand.cs`
+- `backend/src/Application/Chat/Commands/CreateTicketFromMessage/CreateTicketFromMessageCommandHandler.cs`
+- `backend/src/Application/Chat/Commands/CreateTicketFromMessage/CreateTicketFromMessageCommandValidator.cs`
+- `backend/src/Application/Chat/Models/TicketDto.cs`
+- `backend/src/Application/Common/Interfaces/IMessageRepository.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/CompositionRoot/DependencyInjection.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/MessageRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a manual handoff endpoint that creates an `Open` ticket from an existing user message, links it to the originating conversation and message, prevents duplicate tickets for the same message, and rejects assistant messages. Added repository support and unit tests for success, forbidden access, invalid assistant-message creation, and duplicate-ticket conflict.
+
+**Why this approach:** This keeps Phase 3 focused on proving the chat-to-ticket plumbing without introducing AI intent classification yet. The endpoint models the same behavior that the future `Action` intent path will call automatically, while keeping the Application layer testable and the controller thin.
+
+**Alternatives considered:** Creating tickets directly inside `SendMessageCommandHandler` was deferred because without AI classification every user message would risk creating a ticket. A separate manual endpoint keeps behavior explicit until the AI slice can decide intent.
+
+**Follow-ups / risks:** Add ticket list/detail/status endpoints and frontend ticket handoff UI next. Discord notification should be introduced later with a notifier abstraction and should not block ticket creation.
+
+**Reviewed by human:** ☐
+
+---
+## [2026-08-01] Load local configuration from env files
+
+**Prompt/task summary:** Move local backend/frontend configuration to folder-specific `.env` files and clarify how PostgreSQL password rotation works.
+
+**Files changed:**
+- `.env.example`
+- `backend/.env.example`
+- `backend/src/Api/Configuration/DotEnvLoader.cs`
+- `backend/src/Api/Program.cs`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+- `frontend/.env.example`
+- `frontend/package.json`
+- `frontend/scripts/write-environment.mjs`
+- `frontend/src/app/environments/environment.ts`
+
+**What changed:** Added a small backend dotenv loader that reads `backend/.env` before the API builds configuration, without overwriting real process environment variables. Added backend and frontend `.env.example` files, generated local gitignored env files, and added a frontend pre-script that generates Angular's public `environment.ts` from `frontend/.env`. Root `.env.example` is now scoped to Docker Compose only.
+
+**Why this approach:** Backend secrets must stay server-side, so the API can safely load them from `backend/.env` in local development and from real environment variables or secret managers in production. Frontend values are not secret once bundled into browser JavaScript, so the frontend env file is intentionally limited to public config such as the API base URL.
+
+**Alternatives considered:** Adding a third-party dotenv package was avoided because the required parser behavior is small and local-only. Putting secrets in Angular env files was rejected because frontend bundles are visible to users.
+
+**Follow-ups / risks:** Existing PostgreSQL volumes keep their original database password until changed inside Postgres with `ALTER USER` or the volume is recreated. Do not commit any real `.env` file.
+
+**Reviewed by human:** ☐
+
+---
+## [2026-07-31] Replace chat panel row grid with flexbox
+
+**Prompt/task summary:** Record the final chat layout fix provided by the user after another AI-assisted pass: replace the message panel row grid with flexbox so the composer stays visible and the message list owns scrolling.
+
+**Files changed:**
+- `docs/ai-changelog/AI_CHANGELOG.md`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+
+**What changed:** The chat message panel now uses `display: flex` with `flex-direction: column` instead of `display: grid` with fixed row indexes. The panel heading, error message, and chat input are fixed-size flex children, while `.message-list` uses `flex: 1 1 auto`, `min-height: 0`, and `overflow-y: auto` so it is the only region that grows, shrinks, and scrolls. The mobile layout also removes the hard-coded `min-height: 720px`, adds `grid-template-rows: auto minmax(0, 1fr)`, and lowers the conversation list max height to 200px.
+
+**Why this approach:** The grid-row approach was brittle because conditional children such as `error-message` changed the panel's effective row structure and could push or clip the composer. Flexbox matches the desired layout better: fixed header/error/composer areas stay visible, and the message list absorbs the remaining space and scrolls independently.
+
+**Alternatives considered:** Keeping the panel as CSS grid with explicit rows was tried first but caused the input to be clipped or hidden under certain viewport/message states. Absolute positioning was also avoided because it would remove the composer from normal layout flow and risk overlap with messages.
+
+**Follow-ups / risks:** The earlier changelog entries about the failed grid/padding attempts are intentionally left as history, but this entry supersedes them as the final working layout decision.
+
+**Reviewed by human:** ☐
+
+---
+
+## [2026-07-31] Make chat composer visible
+
+**Prompt/task summary:** Fix the composer tray after the previous spacing change hid the message input.
+
+**Files changed:**
+- `docs/ai-changelog/AI_CHANGELOG.md`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+
+**What changed:** Replaced padding-based composer positioning with explicit grid rows and fixed input/button heights so the textarea is always visible at the bottom of the tray.
+
+**Why this approach:** The previous fix relied on padding inside an auto-sized grid row, which could clip the control. Explicit rows give the composer stable dimensions and match the requested lower input placement without hiding the textarea.
+
+**Alternatives considered:** Using absolute positioning was avoided because the form is already a dedicated grid row in the message panel and should remain in normal document flow.
+
+**Follow-ups / risks:** The send button can be changed to an icon button later if the UI moves closer to a Codex-style composer.
+
+**Reviewed by human:** ☐
+
+---
+
+## [2026-07-31] Adjust chat composer spacing
+
+**Prompt/task summary:** Match the requested chat composer layout by adding the larger bottom tray spacing shown in the reference image.
+
+**Files changed:**
+- `docs/ai-changelog/AI_CHANGELOG.md`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+
+**What changed:** Increased the composer tray top padding and send button height so the textarea sits lower inside a dedicated bottom area instead of touching the message list.
+
+**Why this approach:** The requested screenshot shows a persistent composer tray with vertical breathing room above the input. Adjusting the tray spacing is the smallest targeted fix and avoids changing the already-correct message scroll behavior.
+
+**Alternatives considered:** Moving the form outside the message panel was avoided because it would reintroduce viewport and overlay problems in the app shell.
+
+**Follow-ups / risks:** If the user wants the composer visually closer to Codex exactly, the next refinement should tune width, border radius, and icon-style send affordance separately.
+
+**Reviewed by human:** ☐
+
+---
+
+## [2026-07-30] Pin chat composer to bottom
+
+**Prompt/task summary:** Adjust the chat UI so the message composer sits at the bottom like the assistant UI, while older messages are reviewed by scrolling upward.
+
+**Files changed:**
+- `docs/ai-changelog/AI_CHANGELOG.md`
+- `frontend/src/app/app.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+
+**What changed:** Changed the message input to a textarea composer, constrained the authenticated app shell to the viewport, made the message list the scrollable area, anchored short threads to the bottom, and added auto-scroll to the latest message after loading or sending.
+
+**Why this approach:** A chat screen should reserve the bottom action area for composing messages and keep history in a dedicated scroll container. This keeps the input predictable and makes old messages accessible by scrolling up.
+
+**Alternatives considered:** Using a fixed-position composer was avoided because the chat is inside an authenticated app shell with a sidebar and header; keeping the composer inside the message panel avoids overlay and responsive layout issues.
+
+**Follow-ups / risks:** If the authenticated shell gets more fixed header/tool areas later, keep those areas as flex children instead of returning to viewport-height guesses.
+
+**Reviewed by human:** ☐
+
+---
+
+## [2026-07-30] Connect frontend chat to backend API
+
+**Prompt/task summary:** Continue in the recommended order by wiring the frontend chat page to the existing backend chat happy-path API.
+
+**Files changed:**
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/chat/data-access/chat.models.ts`
+- `frontend/src/app/features/chat/data-access/chat.service.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+
+**What changed:** Replaced the protected Chat placeholder route with a real standalone `ChatPageComponent`. Added typed chat DTOs and `ChatService` calls for listing conversations, starting a conversation, loading messages, and sending messages. The UI now shows a conversation list, active message thread, empty/loading/error states, and a message composer that persists user + canned assistant messages through the backend API.
+
+**Why this approach:** This completes the next practical Phase 3 step after backend chat was verified manually. Keeping HTTP code in `features/chat/data-access` matches the project frontend architecture, while the feature component owns only UI state and user interactions. The UI uses the current no-AI JSON response shape so it can be exercised before streaming/RAG is introduced.
+
+**Alternatives considered:** Building a full chat store abstraction was deferred because the feature still has one page and a small state surface. Implementing streaming UI now was rejected because the backend intentionally returns JSON until the AI integration slice.
+
+**Follow-ups / risks:** Add component/service tests around chat interactions when the frontend test harness expands beyond the root app smoke tests. Next backend slice should add ticket creation from messages before AI intent classification.
+
+**Reviewed by human:** ☐
+
+---
+
+## [2026-07-30] Record RAG teaching preference
+
+**Prompt/task summary:** The user asked to remember that any future RAG pipeline, KB docs/chunks, or vector work must include detailed step-by-step teaching.
+
+**Files changed:**
+- `AGENTS.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a dedicated AGENTS.md instruction requiring future agents to explain RAG/KB/vector concepts, data flow, schema choices, trade-offs, and manual testing/debugging in Thai whenever that area is touched.
+
+**Why this approach:** `AGENTS.md` is the repo-level instruction file every AI coding agent must read before touching code, so storing the preference there makes it durable for future sessions and future agents.
+
+**Alternatives considered:** Keeping the preference only in conversation memory was rejected because it would not survive context changes reliably. Putting it only in the changelog was rejected because changelog entries are historical, while `AGENTS.md` is active instruction.
+
+**Follow-ups / risks:** Future agents still need to read and obey `AGENTS.md` before starting RAG-related work.
+
+**Reviewed by human:** ☐
+
+---
+
 ## [2026-07-30] Add chat happy path and ticket attachment metadata
 
 **Prompt/task summary:** Explain when KB docs/chunks/vector should be implemented, add ticket support for attachments, and start Phase 3 backend chat happy path without AI.
@@ -285,6 +471,7 @@ Newest entries at the top.
 **Reviewed by human:** ☐
 
 ---
+
 ## [2026-07-30] Fix pgAdmin default email placeholder
 
 **Prompt/task summary:** pgAdmin failed to start because `admin@helpdesk.local` was rejected as an invalid default email, and PostgreSQL client connection testing showed password authentication failures.
@@ -295,17 +482,18 @@ Newest entries at the top.
 - `docs/PROJECT_PLAN.md`
 - `docs/ai-changelog/AI_CHANGELOG.md`
 
-**What changed:** Replaced the pgAdmin default email placeholder from `admin@helpdesk.local` to `admin@helpdesk.dev`, which pgAdmin accepts. Verified Docker Compose configuration, recreated the pgAdmin container so it picked up the corrected email, and tested PostgreSQL authentication inside the `db` container with `helpdesk/changeme`.
+**What changed:** Replaced the pgAdmin default email placeholder from `admin@helpdesk.local` to `admin@helpdesk.dev`, which pgAdmin accepts. Verified Docker Compose configuration, recreated the pgAdmin container so it picked up the corrected email, and tested PostgreSQL authentication inside the `db` container with `<redacted-dev-db-credentials>`.
 
 **Why this approach:** pgAdmin validates default email addresses on startup and rejects `.local` as a reserved/special-use domain. Changing only the placeholder keeps the Docker setup intact while preserving the intent of having development-only credentials. The PostgreSQL password was verified directly against the running container before recommending destructive volume reset, avoiding unnecessary data loss.
 
-**Alternatives considered:** Disabling pgAdmin email validation was not chosen because using a syntactically accepted development email is simpler and closer to pgAdmin defaults. Resetting the PostgreSQL volume was considered for the password failure, but rejected after container-side authentication with `helpdesk/changeme` succeeded.
+**Alternatives considered:** Disabling pgAdmin email validation was not chosen because using a syntactically accepted development email is simpler and closer to pgAdmin defaults. Resetting the PostgreSQL volume was considered for the password failure, but rejected after container-side authentication with `<redacted-dev-db-credentials>` succeeded.
 
-**Follow-ups / risks:** If a desktop database client still fails authentication, clear any saved password for that connection and recreate it with host `localhost`, port `5432`, database `helpdesk`, username `helpdesk`, and password `changeme`.
+**Follow-ups / risks:** If a desktop database client still fails authentication, clear any saved password for that connection and recreate it with host `localhost`, port `5432`, database `helpdesk`, username `helpdesk`, and password `<redacted-dev-db-password>`.
 
 **Reviewed by human:** ☐
 
 ---
+
 ## [2026-07-30] Add pgAdmin for local database inspection
 
 **Prompt/task summary:** Add pgAdmin4 to Docker Compose so PostgreSQL data can be inspected through a browser UI instead of using CLI commands.
@@ -327,6 +515,7 @@ Newest entries at the top.
 **Reviewed by human:** ☐
 
 ---
+
 ## [2026-07-30] Move backend into dedicated folder
 
 **Prompt/task summary:** Clarify whether Docker must be run now and whether backend API

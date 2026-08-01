@@ -1,0 +1,64 @@
+<section class="chat-workspace">
+  <aside class="conversation-list" aria-label="Conversations">
+    <div class="panel-heading">
+      <div>
+        <p class="eyebrow">Support chat</p>
+        <h2>Conversations</h2>
+      </div>
+      <button type="button" (click)="startConversation()">New</button>
+    </div>
+
+    @if (isLoadingConversations()) {
+      <p class="muted">Loading conversations...</p>
+    } @else if (conversations().length === 0) {
+      <p class="muted">No conversations yet.</p>
+    } @else {
+      <div class="conversation-items">
+        @for (conversation of conversations(); track conversation.id) {
+          <button type="button" class="conversation-item" [class.active]="isActive(conversation)" (click)="selectConversation(conversation)">
+            <span>{{ conversation.title }}</span>
+            <time>{{ conversation.lastMessageAt | date: 'short' }}</time>
+          </button>
+        }
+      </div>
+    }
+  </aside>
+
+  <section class="message-panel" aria-label="Messages">
+    <div class="panel-heading border-bottom">
+      <div>
+        <p class="eyebrow">{{ activeConversation()?.title ?? 'New conversation' }}</p>
+        <h2>Chat workspace</h2>
+      </div>
+    </div>
+
+    @if (errorMessage()) {
+      <p class="error-message">{{ errorMessage() }}</p>
+    }
+
+    <div class="message-list" #messageList>
+      <div class="message-stack">
+        @if (isLoadingMessages()) {
+          <p class="muted inline-muted">Loading messages...</p>
+        } @else if (!hasMessages()) {
+          <div class="empty-state">
+            <h3>Start with an IT issue</h3>
+            <p>Ask about access, devices, network, software, or any support request.</p>
+          </div>
+        } @else {
+          @for (message of messages(); track message.id) {
+            <article class="message" [class.user]="message.sender === 'User'" [class.assistant]="message.sender === 'Assistant'">
+              <span>{{ message.sender }}</span>
+              <p>{{ message.content }}</p>
+            </article>
+          }
+        }
+      </div>
+    </div>
+
+    <form [formGroup]="messageForm" (ngSubmit)="sendMessage()" class="chat-input">
+      <textarea formControlName="content" rows="2" placeholder="Describe the issue" aria-label="Describe the issue"></textarea>
+      <button type="submit" [disabled]="isSending()">{{ isSending() ? 'Sending...' : 'Send' }}</button>
+    </form>
+  </section>
+</section>

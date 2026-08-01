@@ -455,34 +455,46 @@ stack for v1.
 
 ## 17. Environment Configuration
 
-`.env.example` (committed) should list every required variable with a placeholder, e.g.:
+Real `.env` files are gitignored and must never be committed. Commit only `.env.example`
+files with non-secret placeholders.
+
+Root `.env.example` is for Docker Compose:
 
 ```
-# Database
 POSTGRES_USER=helpdesk
-POSTGRES_PASSWORD=changeme
+POSTGRES_PASSWORD=<generate-a-local-postgres-password>
 POSTGRES_DB=helpdesk
-ConnectionStrings__Default=Host=db;Database=helpdesk;Username=helpdesk;Password=changeme
+PGADMIN_DEFAULT_EMAIL=<your-local-pgadmin-email@example.com>
+PGADMIN_DEFAULT_PASSWORD=<generate-a-local-pgadmin-password>
+```
 
-# Auth
-Jwt__Secret=changeme-use-a-long-random-value
+`backend/.env.example` is loaded by the API at startup during local development:
+
+```
+ConnectionStrings__Default=Host=localhost;Port=5433;Database=helpdesk;Username=helpdesk;Password=<same-as-root-POSTGRES_PASSWORD>
+Cors__AllowedOrigins__0=http://localhost:4200
+Jwt__Secret=<generate-a-long-random-secret-at-least-32-characters>
 Jwt__AccessTokenMinutes=15
 Jwt__RefreshTokenDays=7
-
-# AI
-Groq__ApiKey=changeme
+Groq__ApiKey=<your-groq-api-key>
 Groq__ChatModel=llama-3.3-70b-versatile
 Groq__EmbeddingModel=nomic-embed-text-v1_5
-
-# Notifications
-Discord__WebhookUrl=changeme
+Discord__WebhookUrl=<your-discord-webhook-url-or-leave-unset>
 ```
 
-Real `.env` files are gitignored. Production secrets are injected via the hosting
-platform's secret manager, not committed anywhere.
+`frontend/.env.example` is only for public browser config. Do not put API keys, JWT
+secrets, database passwords, or webhook URLs in frontend env files because Angular bundles
+frontend config into JavaScript delivered to the browser.
+
+```
+NG_APP_API_BASE_URL=http://localhost:5175/api/v1
+```
+
+Production secrets are injected via the hosting platform's secret manager, not committed
+anywhere. Docker Compose should require root `.env` values instead of falling back to
+public default passwords.
 
 ---
-
 ## 18. Roadmap / Milestones
 
 | Phase | Scope | Rough effort |
