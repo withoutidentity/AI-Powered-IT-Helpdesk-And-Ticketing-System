@@ -18,6 +18,18 @@ public sealed class UserRepository : IUserRepository
         return _dbContext.Users.FirstOrDefaultAsync(user => user.Id == id, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<User>> ListByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
+    {
+        if (ids.Count == 0)
+        {
+            return [];
+        }
+
+        return await _dbContext.Users
+            .Where(user => ids.Contains(user.Id))
+            .ToListAsync(cancellationToken);
+    }
+
     public Task<User?> GetByUsernameAsync(string username, CancellationToken cancellationToken)
     {
         return _dbContext.Users.FirstOrDefaultAsync(user => user.Username == username.Trim(), cancellationToken);

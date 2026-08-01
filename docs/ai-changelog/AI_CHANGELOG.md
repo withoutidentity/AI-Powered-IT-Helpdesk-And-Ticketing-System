@@ -12,6 +12,42 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add backend ticket list and detail APIs
+
+**Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Api/Services/CurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ICurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Common/Models/PaginatedList.cs`
+- `backend/src/Application/Common/Models/TicketListCriteria.cs`
+- `backend/src/Application/Tickets/Models/TicketDetailDto.cs`
+- `backend/src/Application/Tickets/Models/TicketSummaryDto.cs`
+- `backend/src/Application/Tickets/Models/UserRefDto.cs`
+- `backend/src/Application/Tickets/Queries/GetTicketDetail/*`
+- `backend/src/Application/Tickets/Queries/GetTickets/*`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketQueryHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticketId}`. Ticket list supports `status`, `priority`, `page`, and `pageSize`. The query handlers enforce role scope: employees see created tickets, IT agents see assigned plus unassigned queue tickets, and IT admins see all tickets. Responses include lightweight user references for creator and assignee.
+
+**Why this approach:** Authorization stays in Application query handlers, matching the documented Clean Architecture boundary and keeping role behavior unit-testable without a database. The repository receives already-scoped criteria instead of reading HTTP claims or deciding product permissions itself.
+
+**Alternatives considered:** Putting role checks in controllers was rejected because it would split business authorization across the API layer. Returning raw ticket entities was rejected because API DTOs keep response contracts explicit and prevent accidental field exposure.
+
+**Follow-ups / risks:** Status update, comments, and frontend Tickets page are still separate slices. IT agent queue scope currently follows the documented v1 rule of assigned-to-me or unassigned tickets; if queues become department-based later, the criteria object can be extended.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Simplify chat ticket button template
 
 **Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
@@ -185,6 +221,42 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add backend ticket list and detail APIs
+
+**Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Api/Services/CurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ICurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Common/Models/PaginatedList.cs`
+- `backend/src/Application/Common/Models/TicketListCriteria.cs`
+- `backend/src/Application/Tickets/Models/TicketDetailDto.cs`
+- `backend/src/Application/Tickets/Models/TicketSummaryDto.cs`
+- `backend/src/Application/Tickets/Models/UserRefDto.cs`
+- `backend/src/Application/Tickets/Queries/GetTicketDetail/*`
+- `backend/src/Application/Tickets/Queries/GetTickets/*`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketQueryHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticketId}`. Ticket list supports `status`, `priority`, `page`, and `pageSize`. The query handlers enforce role scope: employees see created tickets, IT agents see assigned plus unassigned queue tickets, and IT admins see all tickets. Responses include lightweight user references for creator and assignee.
+
+**Why this approach:** Authorization stays in Application query handlers, matching the documented Clean Architecture boundary and keeping role behavior unit-testable without a database. The repository receives already-scoped criteria instead of reading HTTP claims or deciding product permissions itself.
+
+**Alternatives considered:** Putting role checks in controllers was rejected because it would split business authorization across the API layer. Returning raw ticket entities was rejected because API DTOs keep response contracts explicit and prevent accidental field exposure.
+
+**Follow-ups / risks:** Status update, comments, and frontend Tickets page are still separate slices. IT agent queue scope currently follows the documented v1 rule of assigned-to-me or unassigned tickets; if queues become department-based later, the criteria object can be extended.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Simplify chat ticket button template
 
 **Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
@@ -224,6 +296,42 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add backend ticket list and detail APIs
+
+**Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Api/Services/CurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ICurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Common/Models/PaginatedList.cs`
+- `backend/src/Application/Common/Models/TicketListCriteria.cs`
+- `backend/src/Application/Tickets/Models/TicketDetailDto.cs`
+- `backend/src/Application/Tickets/Models/TicketSummaryDto.cs`
+- `backend/src/Application/Tickets/Models/UserRefDto.cs`
+- `backend/src/Application/Tickets/Queries/GetTicketDetail/*`
+- `backend/src/Application/Tickets/Queries/GetTickets/*`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketQueryHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticketId}`. Ticket list supports `status`, `priority`, `page`, and `pageSize`. The query handlers enforce role scope: employees see created tickets, IT agents see assigned plus unassigned queue tickets, and IT admins see all tickets. Responses include lightweight user references for creator and assignee.
+
+**Why this approach:** Authorization stays in Application query handlers, matching the documented Clean Architecture boundary and keeping role behavior unit-testable without a database. The repository receives already-scoped criteria instead of reading HTTP claims or deciding product permissions itself.
+
+**Alternatives considered:** Putting role checks in controllers was rejected because it would split business authorization across the API layer. Returning raw ticket entities was rejected because API DTOs keep response contracts explicit and prevent accidental field exposure.
+
+**Follow-ups / risks:** Status update, comments, and frontend Tickets page are still separate slices. IT agent queue scope currently follows the documented v1 rule of assigned-to-me or unassigned tickets; if queues become department-based later, the criteria object can be extended.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Simplify chat ticket button template
 
 **Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
@@ -263,6 +371,42 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add backend ticket list and detail APIs
+
+**Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Api/Services/CurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ICurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Common/Models/PaginatedList.cs`
+- `backend/src/Application/Common/Models/TicketListCriteria.cs`
+- `backend/src/Application/Tickets/Models/TicketDetailDto.cs`
+- `backend/src/Application/Tickets/Models/TicketSummaryDto.cs`
+- `backend/src/Application/Tickets/Models/UserRefDto.cs`
+- `backend/src/Application/Tickets/Queries/GetTicketDetail/*`
+- `backend/src/Application/Tickets/Queries/GetTickets/*`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketQueryHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticketId}`. Ticket list supports `status`, `priority`, `page`, and `pageSize`. The query handlers enforce role scope: employees see created tickets, IT agents see assigned plus unassigned queue tickets, and IT admins see all tickets. Responses include lightweight user references for creator and assignee.
+
+**Why this approach:** Authorization stays in Application query handlers, matching the documented Clean Architecture boundary and keeping role behavior unit-testable without a database. The repository receives already-scoped criteria instead of reading HTTP claims or deciding product permissions itself.
+
+**Alternatives considered:** Putting role checks in controllers was rejected because it would split business authorization across the API layer. Returning raw ticket entities was rejected because API DTOs keep response contracts explicit and prevent accidental field exposure.
+
+**Follow-ups / risks:** Status update, comments, and frontend Tickets page are still separate slices. IT agent queue scope currently follows the documented v1 rule of assigned-to-me or unassigned tickets; if queues become department-based later, the criteria object can be extended.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Simplify chat ticket button template
 
 **Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
@@ -305,6 +449,42 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add backend ticket list and detail APIs
+
+**Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Api/Services/CurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ICurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Common/Models/PaginatedList.cs`
+- `backend/src/Application/Common/Models/TicketListCriteria.cs`
+- `backend/src/Application/Tickets/Models/TicketDetailDto.cs`
+- `backend/src/Application/Tickets/Models/TicketSummaryDto.cs`
+- `backend/src/Application/Tickets/Models/UserRefDto.cs`
+- `backend/src/Application/Tickets/Queries/GetTicketDetail/*`
+- `backend/src/Application/Tickets/Queries/GetTickets/*`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketQueryHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticketId}`. Ticket list supports `status`, `priority`, `page`, and `pageSize`. The query handlers enforce role scope: employees see created tickets, IT agents see assigned plus unassigned queue tickets, and IT admins see all tickets. Responses include lightweight user references for creator and assignee.
+
+**Why this approach:** Authorization stays in Application query handlers, matching the documented Clean Architecture boundary and keeping role behavior unit-testable without a database. The repository receives already-scoped criteria instead of reading HTTP claims or deciding product permissions itself.
+
+**Alternatives considered:** Putting role checks in controllers was rejected because it would split business authorization across the API layer. Returning raw ticket entities was rejected because API DTOs keep response contracts explicit and prevent accidental field exposure.
+
+**Follow-ups / risks:** Status update, comments, and frontend Tickets page are still separate slices. IT agent queue scope currently follows the documented v1 rule of assigned-to-me or unassigned tickets; if queues become department-based later, the criteria object can be extended.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Simplify chat ticket button template
 
 **Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
@@ -350,6 +530,42 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add backend ticket list and detail APIs
+
+**Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Api/Services/CurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ICurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Common/Models/PaginatedList.cs`
+- `backend/src/Application/Common/Models/TicketListCriteria.cs`
+- `backend/src/Application/Tickets/Models/TicketDetailDto.cs`
+- `backend/src/Application/Tickets/Models/TicketSummaryDto.cs`
+- `backend/src/Application/Tickets/Models/UserRefDto.cs`
+- `backend/src/Application/Tickets/Queries/GetTicketDetail/*`
+- `backend/src/Application/Tickets/Queries/GetTickets/*`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketQueryHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticketId}`. Ticket list supports `status`, `priority`, `page`, and `pageSize`. The query handlers enforce role scope: employees see created tickets, IT agents see assigned plus unassigned queue tickets, and IT admins see all tickets. Responses include lightweight user references for creator and assignee.
+
+**Why this approach:** Authorization stays in Application query handlers, matching the documented Clean Architecture boundary and keeping role behavior unit-testable without a database. The repository receives already-scoped criteria instead of reading HTTP claims or deciding product permissions itself.
+
+**Alternatives considered:** Putting role checks in controllers was rejected because it would split business authorization across the API layer. Returning raw ticket entities was rejected because API DTOs keep response contracts explicit and prevent accidental field exposure.
+
+**Follow-ups / risks:** Status update, comments, and frontend Tickets page are still separate slices. IT agent queue scope currently follows the documented v1 rule of assigned-to-me or unassigned tickets; if queues become department-based later, the criteria object can be extended.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Simplify chat ticket button template
 
 **Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
@@ -389,6 +605,42 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add backend ticket list and detail APIs
+
+**Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Api/Services/CurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ICurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Common/Models/PaginatedList.cs`
+- `backend/src/Application/Common/Models/TicketListCriteria.cs`
+- `backend/src/Application/Tickets/Models/TicketDetailDto.cs`
+- `backend/src/Application/Tickets/Models/TicketSummaryDto.cs`
+- `backend/src/Application/Tickets/Models/UserRefDto.cs`
+- `backend/src/Application/Tickets/Queries/GetTicketDetail/*`
+- `backend/src/Application/Tickets/Queries/GetTickets/*`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketQueryHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticketId}`. Ticket list supports `status`, `priority`, `page`, and `pageSize`. The query handlers enforce role scope: employees see created tickets, IT agents see assigned plus unassigned queue tickets, and IT admins see all tickets. Responses include lightweight user references for creator and assignee.
+
+**Why this approach:** Authorization stays in Application query handlers, matching the documented Clean Architecture boundary and keeping role behavior unit-testable without a database. The repository receives already-scoped criteria instead of reading HTTP claims or deciding product permissions itself.
+
+**Alternatives considered:** Putting role checks in controllers was rejected because it would split business authorization across the API layer. Returning raw ticket entities was rejected because API DTOs keep response contracts explicit and prevent accidental field exposure.
+
+**Follow-ups / risks:** Status update, comments, and frontend Tickets page are still separate slices. IT agent queue scope currently follows the documented v1 rule of assigned-to-me or unassigned tickets; if queues become department-based later, the criteria object can be extended.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Simplify chat ticket button template
 
 **Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
@@ -444,6 +696,42 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add backend ticket list and detail APIs
+
+**Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Api/Services/CurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ICurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Common/Models/PaginatedList.cs`
+- `backend/src/Application/Common/Models/TicketListCriteria.cs`
+- `backend/src/Application/Tickets/Models/TicketDetailDto.cs`
+- `backend/src/Application/Tickets/Models/TicketSummaryDto.cs`
+- `backend/src/Application/Tickets/Models/UserRefDto.cs`
+- `backend/src/Application/Tickets/Queries/GetTicketDetail/*`
+- `backend/src/Application/Tickets/Queries/GetTickets/*`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketQueryHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticketId}`. Ticket list supports `status`, `priority`, `page`, and `pageSize`. The query handlers enforce role scope: employees see created tickets, IT agents see assigned plus unassigned queue tickets, and IT admins see all tickets. Responses include lightweight user references for creator and assignee.
+
+**Why this approach:** Authorization stays in Application query handlers, matching the documented Clean Architecture boundary and keeping role behavior unit-testable without a database. The repository receives already-scoped criteria instead of reading HTTP claims or deciding product permissions itself.
+
+**Alternatives considered:** Putting role checks in controllers was rejected because it would split business authorization across the API layer. Returning raw ticket entities was rejected because API DTOs keep response contracts explicit and prevent accidental field exposure.
+
+**Follow-ups / risks:** Status update, comments, and frontend Tickets page are still separate slices. IT agent queue scope currently follows the documented v1 rule of assigned-to-me or unassigned tickets; if queues become department-based later, the criteria object can be extended.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Simplify chat ticket button template
 
 **Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
@@ -499,6 +787,42 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add backend ticket list and detail APIs
+
+**Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Api/Services/CurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ICurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Common/Models/PaginatedList.cs`
+- `backend/src/Application/Common/Models/TicketListCriteria.cs`
+- `backend/src/Application/Tickets/Models/TicketDetailDto.cs`
+- `backend/src/Application/Tickets/Models/TicketSummaryDto.cs`
+- `backend/src/Application/Tickets/Models/UserRefDto.cs`
+- `backend/src/Application/Tickets/Queries/GetTicketDetail/*`
+- `backend/src/Application/Tickets/Queries/GetTickets/*`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketQueryHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticketId}`. Ticket list supports `status`, `priority`, `page`, and `pageSize`. The query handlers enforce role scope: employees see created tickets, IT agents see assigned plus unassigned queue tickets, and IT admins see all tickets. Responses include lightweight user references for creator and assignee.
+
+**Why this approach:** Authorization stays in Application query handlers, matching the documented Clean Architecture boundary and keeping role behavior unit-testable without a database. The repository receives already-scoped criteria instead of reading HTTP claims or deciding product permissions itself.
+
+**Alternatives considered:** Putting role checks in controllers was rejected because it would split business authorization across the API layer. Returning raw ticket entities was rejected because API DTOs keep response contracts explicit and prevent accidental field exposure.
+
+**Follow-ups / risks:** Status update, comments, and frontend Tickets page are still separate slices. IT agent queue scope currently follows the documented v1 rule of assigned-to-me or unassigned tickets; if queues become department-based later, the criteria object can be extended.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Simplify chat ticket button template
 
 **Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
@@ -538,6 +862,42 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add backend ticket list and detail APIs
+
+**Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Api/Services/CurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ICurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Common/Models/PaginatedList.cs`
+- `backend/src/Application/Common/Models/TicketListCriteria.cs`
+- `backend/src/Application/Tickets/Models/TicketDetailDto.cs`
+- `backend/src/Application/Tickets/Models/TicketSummaryDto.cs`
+- `backend/src/Application/Tickets/Models/UserRefDto.cs`
+- `backend/src/Application/Tickets/Queries/GetTicketDetail/*`
+- `backend/src/Application/Tickets/Queries/GetTickets/*`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketQueryHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticketId}`. Ticket list supports `status`, `priority`, `page`, and `pageSize`. The query handlers enforce role scope: employees see created tickets, IT agents see assigned plus unassigned queue tickets, and IT admins see all tickets. Responses include lightweight user references for creator and assignee.
+
+**Why this approach:** Authorization stays in Application query handlers, matching the documented Clean Architecture boundary and keeping role behavior unit-testable without a database. The repository receives already-scoped criteria instead of reading HTTP claims or deciding product permissions itself.
+
+**Alternatives considered:** Putting role checks in controllers was rejected because it would split business authorization across the API layer. Returning raw ticket entities was rejected because API DTOs keep response contracts explicit and prevent accidental field exposure.
+
+**Follow-ups / risks:** Status update, comments, and frontend Tickets page are still separate slices. IT agent queue scope currently follows the documented v1 rule of assigned-to-me or unassigned tickets; if queues become department-based later, the criteria object can be extended.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Simplify chat ticket button template
 
 **Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
@@ -577,6 +937,42 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add backend ticket list and detail APIs
+
+**Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Api/Services/CurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ICurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Common/Models/PaginatedList.cs`
+- `backend/src/Application/Common/Models/TicketListCriteria.cs`
+- `backend/src/Application/Tickets/Models/TicketDetailDto.cs`
+- `backend/src/Application/Tickets/Models/TicketSummaryDto.cs`
+- `backend/src/Application/Tickets/Models/UserRefDto.cs`
+- `backend/src/Application/Tickets/Queries/GetTicketDetail/*`
+- `backend/src/Application/Tickets/Queries/GetTickets/*`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketQueryHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticketId}`. Ticket list supports `status`, `priority`, `page`, and `pageSize`. The query handlers enforce role scope: employees see created tickets, IT agents see assigned plus unassigned queue tickets, and IT admins see all tickets. Responses include lightweight user references for creator and assignee.
+
+**Why this approach:** Authorization stays in Application query handlers, matching the documented Clean Architecture boundary and keeping role behavior unit-testable without a database. The repository receives already-scoped criteria instead of reading HTTP claims or deciding product permissions itself.
+
+**Alternatives considered:** Putting role checks in controllers was rejected because it would split business authorization across the API layer. Returning raw ticket entities was rejected because API DTOs keep response contracts explicit and prevent accidental field exposure.
+
+**Follow-ups / risks:** Status update, comments, and frontend Tickets page are still separate slices. IT agent queue scope currently follows the documented v1 rule of assigned-to-me or unassigned tickets; if queues become department-based later, the criteria object can be extended.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Simplify chat ticket button template
 
 **Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
@@ -621,6 +1017,42 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add backend ticket list and detail APIs
+
+**Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Api/Services/CurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ICurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Common/Models/PaginatedList.cs`
+- `backend/src/Application/Common/Models/TicketListCriteria.cs`
+- `backend/src/Application/Tickets/Models/TicketDetailDto.cs`
+- `backend/src/Application/Tickets/Models/TicketSummaryDto.cs`
+- `backend/src/Application/Tickets/Models/UserRefDto.cs`
+- `backend/src/Application/Tickets/Queries/GetTicketDetail/*`
+- `backend/src/Application/Tickets/Queries/GetTickets/*`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketQueryHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticketId}`. Ticket list supports `status`, `priority`, `page`, and `pageSize`. The query handlers enforce role scope: employees see created tickets, IT agents see assigned plus unassigned queue tickets, and IT admins see all tickets. Responses include lightweight user references for creator and assignee.
+
+**Why this approach:** Authorization stays in Application query handlers, matching the documented Clean Architecture boundary and keeping role behavior unit-testable without a database. The repository receives already-scoped criteria instead of reading HTTP claims or deciding product permissions itself.
+
+**Alternatives considered:** Putting role checks in controllers was rejected because it would split business authorization across the API layer. Returning raw ticket entities was rejected because API DTOs keep response contracts explicit and prevent accidental field exposure.
+
+**Follow-ups / risks:** Status update, comments, and frontend Tickets page are still separate slices. IT agent queue scope currently follows the documented v1 rule of assigned-to-me or unassigned tickets; if queues become department-based later, the criteria object can be extended.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Simplify chat ticket button template
 
 **Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
@@ -668,6 +1100,42 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add backend ticket list and detail APIs
+
+**Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Api/Services/CurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ICurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Common/Models/PaginatedList.cs`
+- `backend/src/Application/Common/Models/TicketListCriteria.cs`
+- `backend/src/Application/Tickets/Models/TicketDetailDto.cs`
+- `backend/src/Application/Tickets/Models/TicketSummaryDto.cs`
+- `backend/src/Application/Tickets/Models/UserRefDto.cs`
+- `backend/src/Application/Tickets/Queries/GetTicketDetail/*`
+- `backend/src/Application/Tickets/Queries/GetTickets/*`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketQueryHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticketId}`. Ticket list supports `status`, `priority`, `page`, and `pageSize`. The query handlers enforce role scope: employees see created tickets, IT agents see assigned plus unassigned queue tickets, and IT admins see all tickets. Responses include lightweight user references for creator and assignee.
+
+**Why this approach:** Authorization stays in Application query handlers, matching the documented Clean Architecture boundary and keeping role behavior unit-testable without a database. The repository receives already-scoped criteria instead of reading HTTP claims or deciding product permissions itself.
+
+**Alternatives considered:** Putting role checks in controllers was rejected because it would split business authorization across the API layer. Returning raw ticket entities was rejected because API DTOs keep response contracts explicit and prevent accidental field exposure.
+
+**Follow-ups / risks:** Status update, comments, and frontend Tickets page are still separate slices. IT agent queue scope currently follows the documented v1 rule of assigned-to-me or unassigned tickets; if queues become department-based later, the criteria object can be extended.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Simplify chat ticket button template
 
 **Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
@@ -725,6 +1193,42 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add backend ticket list and detail APIs
+
+**Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Api/Services/CurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ICurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Common/Models/PaginatedList.cs`
+- `backend/src/Application/Common/Models/TicketListCriteria.cs`
+- `backend/src/Application/Tickets/Models/TicketDetailDto.cs`
+- `backend/src/Application/Tickets/Models/TicketSummaryDto.cs`
+- `backend/src/Application/Tickets/Models/UserRefDto.cs`
+- `backend/src/Application/Tickets/Queries/GetTicketDetail/*`
+- `backend/src/Application/Tickets/Queries/GetTickets/*`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketQueryHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticketId}`. Ticket list supports `status`, `priority`, `page`, and `pageSize`. The query handlers enforce role scope: employees see created tickets, IT agents see assigned plus unassigned queue tickets, and IT admins see all tickets. Responses include lightweight user references for creator and assignee.
+
+**Why this approach:** Authorization stays in Application query handlers, matching the documented Clean Architecture boundary and keeping role behavior unit-testable without a database. The repository receives already-scoped criteria instead of reading HTTP claims or deciding product permissions itself.
+
+**Alternatives considered:** Putting role checks in controllers was rejected because it would split business authorization across the API layer. Returning raw ticket entities was rejected because API DTOs keep response contracts explicit and prevent accidental field exposure.
+
+**Follow-ups / risks:** Status update, comments, and frontend Tickets page are still separate slices. IT agent queue scope currently follows the documented v1 rule of assigned-to-me or unassigned tickets; if queues become department-based later, the criteria object can be extended.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Simplify chat ticket button template
 
 **Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
@@ -770,6 +1274,42 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add backend ticket list and detail APIs
+
+**Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Api/Services/CurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ICurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Common/Models/PaginatedList.cs`
+- `backend/src/Application/Common/Models/TicketListCriteria.cs`
+- `backend/src/Application/Tickets/Models/TicketDetailDto.cs`
+- `backend/src/Application/Tickets/Models/TicketSummaryDto.cs`
+- `backend/src/Application/Tickets/Models/UserRefDto.cs`
+- `backend/src/Application/Tickets/Queries/GetTicketDetail/*`
+- `backend/src/Application/Tickets/Queries/GetTickets/*`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketQueryHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticketId}`. Ticket list supports `status`, `priority`, `page`, and `pageSize`. The query handlers enforce role scope: employees see created tickets, IT agents see assigned plus unassigned queue tickets, and IT admins see all tickets. Responses include lightweight user references for creator and assignee.
+
+**Why this approach:** Authorization stays in Application query handlers, matching the documented Clean Architecture boundary and keeping role behavior unit-testable without a database. The repository receives already-scoped criteria instead of reading HTTP claims or deciding product permissions itself.
+
+**Alternatives considered:** Putting role checks in controllers was rejected because it would split business authorization across the API layer. Returning raw ticket entities was rejected because API DTOs keep response contracts explicit and prevent accidental field exposure.
+
+**Follow-ups / risks:** Status update, comments, and frontend Tickets page are still separate slices. IT agent queue scope currently follows the documented v1 rule of assigned-to-me or unassigned tickets; if queues become department-based later, the criteria object can be extended.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Simplify chat ticket button template
 
 **Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
@@ -834,6 +1374,42 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add backend ticket list and detail APIs
+
+**Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Api/Services/CurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ICurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Common/Models/PaginatedList.cs`
+- `backend/src/Application/Common/Models/TicketListCriteria.cs`
+- `backend/src/Application/Tickets/Models/TicketDetailDto.cs`
+- `backend/src/Application/Tickets/Models/TicketSummaryDto.cs`
+- `backend/src/Application/Tickets/Models/UserRefDto.cs`
+- `backend/src/Application/Tickets/Queries/GetTicketDetail/*`
+- `backend/src/Application/Tickets/Queries/GetTickets/*`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketQueryHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticketId}`. Ticket list supports `status`, `priority`, `page`, and `pageSize`. The query handlers enforce role scope: employees see created tickets, IT agents see assigned plus unassigned queue tickets, and IT admins see all tickets. Responses include lightweight user references for creator and assignee.
+
+**Why this approach:** Authorization stays in Application query handlers, matching the documented Clean Architecture boundary and keeping role behavior unit-testable without a database. The repository receives already-scoped criteria instead of reading HTTP claims or deciding product permissions itself.
+
+**Alternatives considered:** Putting role checks in controllers was rejected because it would split business authorization across the API layer. Returning raw ticket entities was rejected because API DTOs keep response contracts explicit and prevent accidental field exposure.
+
+**Follow-ups / risks:** Status update, comments, and frontend Tickets page are still separate slices. IT agent queue scope currently follows the documented v1 rule of assigned-to-me or unassigned tickets; if queues become department-based later, the criteria object can be extended.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Simplify chat ticket button template
 
 **Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
@@ -875,6 +1451,42 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add backend ticket list and detail APIs
+
+**Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Api/Services/CurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ICurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Common/Models/PaginatedList.cs`
+- `backend/src/Application/Common/Models/TicketListCriteria.cs`
+- `backend/src/Application/Tickets/Models/TicketDetailDto.cs`
+- `backend/src/Application/Tickets/Models/TicketSummaryDto.cs`
+- `backend/src/Application/Tickets/Models/UserRefDto.cs`
+- `backend/src/Application/Tickets/Queries/GetTicketDetail/*`
+- `backend/src/Application/Tickets/Queries/GetTickets/*`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketQueryHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticketId}`. Ticket list supports `status`, `priority`, `page`, and `pageSize`. The query handlers enforce role scope: employees see created tickets, IT agents see assigned plus unassigned queue tickets, and IT admins see all tickets. Responses include lightweight user references for creator and assignee.
+
+**Why this approach:** Authorization stays in Application query handlers, matching the documented Clean Architecture boundary and keeping role behavior unit-testable without a database. The repository receives already-scoped criteria instead of reading HTTP claims or deciding product permissions itself.
+
+**Alternatives considered:** Putting role checks in controllers was rejected because it would split business authorization across the API layer. Returning raw ticket entities was rejected because API DTOs keep response contracts explicit and prevent accidental field exposure.
+
+**Follow-ups / risks:** Status update, comments, and frontend Tickets page are still separate slices. IT agent queue scope currently follows the documented v1 rule of assigned-to-me or unassigned tickets; if queues become department-based later, the criteria object can be extended.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Simplify chat ticket button template
 
 **Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
@@ -916,6 +1528,42 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add backend ticket list and detail APIs
+
+**Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Api/Services/CurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ICurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Common/Models/PaginatedList.cs`
+- `backend/src/Application/Common/Models/TicketListCriteria.cs`
+- `backend/src/Application/Tickets/Models/TicketDetailDto.cs`
+- `backend/src/Application/Tickets/Models/TicketSummaryDto.cs`
+- `backend/src/Application/Tickets/Models/UserRefDto.cs`
+- `backend/src/Application/Tickets/Queries/GetTicketDetail/*`
+- `backend/src/Application/Tickets/Queries/GetTickets/*`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketQueryHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticketId}`. Ticket list supports `status`, `priority`, `page`, and `pageSize`. The query handlers enforce role scope: employees see created tickets, IT agents see assigned plus unassigned queue tickets, and IT admins see all tickets. Responses include lightweight user references for creator and assignee.
+
+**Why this approach:** Authorization stays in Application query handlers, matching the documented Clean Architecture boundary and keeping role behavior unit-testable without a database. The repository receives already-scoped criteria instead of reading HTTP claims or deciding product permissions itself.
+
+**Alternatives considered:** Putting role checks in controllers was rejected because it would split business authorization across the API layer. Returning raw ticket entities was rejected because API DTOs keep response contracts explicit and prevent accidental field exposure.
+
+**Follow-ups / risks:** Status update, comments, and frontend Tickets page are still separate slices. IT agent queue scope currently follows the documented v1 rule of assigned-to-me or unassigned tickets; if queues become department-based later, the criteria object can be extended.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Simplify chat ticket button template
 
 **Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
@@ -986,6 +1634,42 @@ API/web containers are a later compose expansion.
 
 ---
 
+## [2026-08-01] Add backend ticket list and detail APIs
+
+**Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Api/Services/CurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ICurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Common/Models/PaginatedList.cs`
+- `backend/src/Application/Common/Models/TicketListCriteria.cs`
+- `backend/src/Application/Tickets/Models/TicketDetailDto.cs`
+- `backend/src/Application/Tickets/Models/TicketSummaryDto.cs`
+- `backend/src/Application/Tickets/Models/UserRefDto.cs`
+- `backend/src/Application/Tickets/Queries/GetTicketDetail/*`
+- `backend/src/Application/Tickets/Queries/GetTickets/*`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketQueryHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticketId}`. Ticket list supports `status`, `priority`, `page`, and `pageSize`. The query handlers enforce role scope: employees see created tickets, IT agents see assigned plus unassigned queue tickets, and IT admins see all tickets. Responses include lightweight user references for creator and assignee.
+
+**Why this approach:** Authorization stays in Application query handlers, matching the documented Clean Architecture boundary and keeping role behavior unit-testable without a database. The repository receives already-scoped criteria instead of reading HTTP claims or deciding product permissions itself.
+
+**Alternatives considered:** Putting role checks in controllers was rejected because it would split business authorization across the API layer. Returning raw ticket entities was rejected because API DTOs keep response contracts explicit and prevent accidental field exposure.
+
+**Follow-ups / risks:** Status update, comments, and frontend Tickets page are still separate slices. IT agent queue scope currently follows the documented v1 rule of assigned-to-me or unassigned tickets; if queues become department-based later, the criteria object can be extended.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Simplify chat ticket button template
 
 **Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
@@ -1088,6 +1772,42 @@ commands are scoped to this directory.
 
 ---
 
+## [2026-08-01] Add backend ticket list and detail APIs
+
+**Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Api/Services/CurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ICurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Common/Models/PaginatedList.cs`
+- `backend/src/Application/Common/Models/TicketListCriteria.cs`
+- `backend/src/Application/Tickets/Models/TicketDetailDto.cs`
+- `backend/src/Application/Tickets/Models/TicketSummaryDto.cs`
+- `backend/src/Application/Tickets/Models/UserRefDto.cs`
+- `backend/src/Application/Tickets/Queries/GetTicketDetail/*`
+- `backend/src/Application/Tickets/Queries/GetTickets/*`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketQueryHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticketId}`. Ticket list supports `status`, `priority`, `page`, and `pageSize`. The query handlers enforce role scope: employees see created tickets, IT agents see assigned plus unassigned queue tickets, and IT admins see all tickets. Responses include lightweight user references for creator and assignee.
+
+**Why this approach:** Authorization stays in Application query handlers, matching the documented Clean Architecture boundary and keeping role behavior unit-testable without a database. The repository receives already-scoped criteria instead of reading HTTP claims or deciding product permissions itself.
+
+**Alternatives considered:** Putting role checks in controllers was rejected because it would split business authorization across the API layer. Returning raw ticket entities was rejected because API DTOs keep response contracts explicit and prevent accidental field exposure.
+
+**Follow-ups / risks:** Status update, comments, and frontend Tickets page are still separate slices. IT agent queue scope currently follows the documented v1 rule of assigned-to-me or unassigned tickets; if queues become department-based later, the criteria object can be extended.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Simplify chat ticket button template
 
 **Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
@@ -1128,6 +1848,42 @@ over alternatives, any constraints from `docs/PROJECT_PLAN.md` that drove the de
 
 ---
 
+## [2026-08-01] Add backend ticket list and detail APIs
+
+**Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Api/Services/CurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ICurrentUserService.cs`
+- `backend/src/Application/Common/Interfaces/ITicketRepository.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Common/Models/PaginatedList.cs`
+- `backend/src/Application/Common/Models/TicketListCriteria.cs`
+- `backend/src/Application/Tickets/Models/TicketDetailDto.cs`
+- `backend/src/Application/Tickets/Models/TicketSummaryDto.cs`
+- `backend/src/Application/Tickets/Models/UserRefDto.cs`
+- `backend/src/Application/Tickets/Queries/GetTicketDetail/*`
+- `backend/src/Application/Tickets/Queries/GetTickets/*`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketQueryHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GET /api/v1/tickets` and `GET /api/v1/tickets/{ticketId}`. Ticket list supports `status`, `priority`, `page`, and `pageSize`. The query handlers enforce role scope: employees see created tickets, IT agents see assigned plus unassigned queue tickets, and IT admins see all tickets. Responses include lightweight user references for creator and assignee.
+
+**Why this approach:** Authorization stays in Application query handlers, matching the documented Clean Architecture boundary and keeping role behavior unit-testable without a database. The repository receives already-scoped criteria instead of reading HTTP claims or deciding product permissions itself.
+
+**Alternatives considered:** Putting role checks in controllers was rejected because it would split business authorization across the API layer. Returning raw ticket entities was rejected because API DTOs keep response contracts explicit and prevent accidental field exposure.
+
+**Follow-ups / risks:** Status update, comments, and frontend Tickets page are still separate slices. IT agent queue scope currently follows the documented v1 rule of assigned-to-me or unassigned tickets; if queues become department-based later, the criteria object can be extended.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Simplify chat ticket button template
 
 **Prompt/task summary:** Check and fix the Chat page ticket button template after the user reported an error around the disabled/click bindings and conditional label.
@@ -1181,6 +1937,7 @@ approach, which is both testable and framework-agnostic.
 revisit whether the transition graph needs an `Admin` override path.
 
 **Reviewed by human:** [ ]
+
 
 
 

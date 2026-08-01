@@ -4,6 +4,7 @@ using Application.Chat.Commands.StartConversation;
 using Application.Chat.Queries.GetConversations;
 using Application.Chat.Queries.GetMessages;
 using Application.Common.Interfaces;
+using Application.Common.Models;
 using Domain.Entities;
 using Domain.Enums;
 using FluentAssertions;
@@ -231,12 +232,14 @@ public sealed class ChatCommandHandlerTests
     }
     private sealed class FakeCurrentUserService : ICurrentUserService
     {
-        public FakeCurrentUserService(Guid userId)
+        public FakeCurrentUserService(Guid userId, UserRole role = UserRole.Employee)
         {
             UserId = userId;
+            Role = role;
         }
 
         public Guid UserId { get; }
+        public UserRole Role { get; }
     }
 
     private sealed class FakeConversationRepository : IConversationRepository
@@ -296,9 +299,25 @@ public sealed class ChatCommandHandlerTests
     {
         public List<Ticket> Items { get; } = new();
 
+        public Task<Ticket?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(Items.FirstOrDefault(ticket => ticket.Id == id));
+        }
+
         public Task<Ticket?> GetByConversationIdAsync(Guid conversationId, CancellationToken cancellationToken)
         {
             return Task.FromResult(Items.FirstOrDefault(ticket => ticket.ConversationId == conversationId));
+        }
+
+        public Task<IReadOnlyList<Ticket>> ListAsync(TicketListCriteria criteria, CancellationToken cancellationToken)
+        {
+            IReadOnlyList<Ticket> result = Items;
+            return Task.FromResult(result);
+        }
+
+        public Task<int> CountAsync(TicketListCriteria criteria, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(Items.Count);
         }
 
         public Task<IReadOnlySet<Guid>> ListConversationIdsWithTicketsAsync(IReadOnlyCollection<Guid> conversationIds, CancellationToken cancellationToken)
@@ -328,5 +347,7 @@ public sealed class ChatCommandHandlerTests
         }
     }
 }
+
+
 
 

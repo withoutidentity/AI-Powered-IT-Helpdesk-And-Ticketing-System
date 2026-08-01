@@ -334,46 +334,69 @@ Removes the document and its chunks.
 ## 4. Tickets
 
 ### `GET /tickets`
-**Auth required:** `ITAgent` (sees tickets assigned to them, or unassigned in their
-queue), `ITAdmin` (sees all)
+Lists tickets visible to the authenticated user.
 
-**Query:** `?status=Open&priority=High&assignedTo=me&page=1&pageSize=20`
+**Auth required:** Yes - `Employee` sees tickets they created, `ITAgent` sees tickets assigned to them plus unassigned queue tickets, `ITAdmin` sees all tickets.
 
-**Response `200 OK`** — paginated envelope of:
+**Query:** `?status=Open&priority=High&page=1&pageSize=20`
+
+- `status`: optional, one of `Open`, `InProgress`, `Resolved`, `Closed`
+- `priority`: optional, one of `Low`, `Medium`, `High`
+- `page`: optional, defaults to `1`
+- `pageSize`: optional, defaults to `20`, max `100`
+
+**Response `200 OK`**
 ```json
 {
-  "id": "t1042...",
-  "title": "Printer jammed - Floor 3",
-  "status": "Open",
-  "priority": "Medium",
-  "createdBy": "jane.doe",
-  "assignedTo": null,
-  "createdAt": "2026-07-29T09:06:00Z"
+  "items": [
+    {
+      "id": "t1042...",
+      "conversationId": "c1a2b3c4-...",
+      "messageId": "m1...",
+      "title": "Printer jammed - Floor 3",
+      "status": "Open",
+      "priority": "Medium",
+      "createdBy": { "id": "b3f1e2a0-...", "username": "jane.doe" },
+      "assignedTo": null,
+      "createdAt": "2026-07-29T09:06:00Z",
+      "updatedAt": "2026-07-29T09:06:00Z"
+    }
+  ],
+  "page": 1,
+  "pageSize": 20,
+  "totalCount": 1,
+  "totalPages": 1
 }
 ```
+
+**Errors:** `400` invalid status/priority/page/pageSize
 
 ---
 
 ### `GET /tickets/{ticketId}`
-**Auth required:** Owner (`Employee` who created it), or `ITAgent`/`ITAdmin`
+Returns one ticket if it is visible to the authenticated user.
+
+**Auth required:** Yes - owner `Employee`, assigned/unassigned-queue `ITAgent`, or `ITAdmin`.
 
 **Response `200 OK`**
 ```json
 {
   "id": "t1042...",
+  "conversationId": "c1a2b3c4-...",
+  "messageId": "m1...",
   "title": "Printer jammed - Floor 3",
   "description": "The printer on floor 3 is jammed, can someone take a look?",
   "status": "Open",
   "priority": "Medium",
-  "conversationId": "c1a2b3c4-...",
   "createdBy": { "id": "b3f1e2a0-...", "username": "jane.doe" },
   "assignedTo": null,
-  "comments": [],
   "createdAt": "2026-07-29T09:06:00Z",
   "updatedAt": "2026-07-29T09:06:00Z",
-  "attachments": []
+  "attachmentsJson": "[]"
 }
 ```
+
+**Errors:** `403` ticket exists but is outside the current user's scope, `404` ticket not found
 
 ---
 
@@ -385,9 +408,9 @@ queue), `ITAdmin` (sees all)
 { "status": "InProgress", "assignedTo": "b7c8..." }
 ```
 
-**Response `200 OK`** — updated ticket object.
+**Response `200 OK`** - updated ticket object.
 
-**Errors:** `409` invalid status transition (e.g. `Closed → Open` must go through
+**Errors:** `409` invalid status transition (e.g. `Closed -> Open` must go through
 `InProgress`/`Resolved` per the defined lifecycle)
 
 ---
@@ -412,7 +435,6 @@ queue), `ITAdmin` (sees all)
 ```
 
 ---
-
 ## 5. Dashboard
 
 ### `GET /dashboard/stats`
@@ -445,6 +467,7 @@ queue), `ITAdmin` (sees all)
 **Auth required:** No
 **Response `200 OK` / `503 Service Unavailable`** — checks DB connectivity and (optionally,
 non-blocking) Groq API reachability.
+
 
 
 
