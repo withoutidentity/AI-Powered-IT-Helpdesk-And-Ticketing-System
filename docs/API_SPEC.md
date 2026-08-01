@@ -401,17 +401,18 @@ Returns one ticket if it is visible to the authenticated user. The Angular Ticke
 ---
 
 ### `PATCH /tickets/{ticketId}/status`
-**Auth required:** `ITAgent` (assigned agent only), `ITAdmin`
+Updates a ticket status along the v1 workflow: `Open -> InProgress -> Resolved -> Closed`. The Angular Tickets detail view exposes this as a next-status action for `ITAgent` and `ITAdmin` users.
+
+**Auth required:** `ITAgent` for tickets assigned to them or unassigned queue tickets, `ITAdmin` for any ticket. `Employee` cannot update status in this slice.
 
 **Request**
 ```json
-{ "status": "InProgress", "assignedTo": "b7c8..." }
+{ "status": "InProgress" }
 ```
 
-**Response `200 OK`** - updated ticket object.
+**Response `200 OK`** - updated ticket detail object.
 
-**Errors:** `409` invalid status transition (e.g. `Closed -> Open` must go through
-`InProgress`/`Resolved` per the defined lifecycle)
+**Errors:** `403` not allowed to update this ticket, `404` ticket not found, `400` invalid status value, `409` invalid status transition.
 
 ---
 
@@ -467,6 +468,8 @@ Returns one ticket if it is visible to the authenticated user. The Angular Ticke
 **Auth required:** No
 **Response `200 OK` / `503 Service Unavailable`** — checks DB connectivity and (optionally,
 non-blocking) Groq API reachability.
+
+
 
 
 

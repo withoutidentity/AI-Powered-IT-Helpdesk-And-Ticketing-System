@@ -1,3 +1,4 @@
+using Application.Tickets.Commands.UpdateTicketStatus;
 using Application.Tickets.Queries.GetTicketDetail;
 using Application.Tickets.Queries.GetTickets;
 using MediatR;
@@ -57,6 +58,25 @@ public sealed class TicketsController : ControllerBase
         return Ok(result.Value);
     }
 
+    [HttpPatch("{ticketId:guid}/status")]
+    public async Task<IActionResult> UpdateTicketStatus(Guid ticketId, UpdateTicketStatusRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new UpdateTicketStatusCommand(ticketId, request.Status), cancellationToken);
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                "TicketNotFound" => NotFoundProblem(result.ErrorMessage!),
+                "Forbidden" => ForbiddenProblem(result.ErrorMessage!),
+                "InvalidStatusTransition" => ConflictProblem(result.ErrorMessage!),
+                "ValidationFailed" => ValidationProblem(result.ErrorMessage!),
+                _ => BadRequestProblem(result.ErrorMessage!)
+            };
+        }
+
+        return Ok(result.Value);
+    }
+
     private IActionResult BadRequestProblem(string detail)
     {
         return Problem(title: "Bad request", detail: detail, statusCode: StatusCodes.Status400BadRequest);
@@ -76,4 +96,11 @@ public sealed class TicketsController : ControllerBase
     {
         return Problem(title: "Forbidden", detail: detail, statusCode: StatusCodes.Status403Forbidden);
     }
+
+    private IActionResult ConflictProblem(string detail)
+    {
+        return Problem(title: "Conflict", detail: detail, statusCode: StatusCodes.Status409Conflict);
+    }
 }
+
+public sealed record UpdateTicketStatusRequest(string Status);

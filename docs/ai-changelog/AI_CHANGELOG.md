@@ -12,6 +12,74 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Restrict ticket conversation deep links to owners
+
+**Prompt/task summary:** Prevent ITAgent and ITAdmin users from clicking through to a ticket's linked conversation when they are not the owner of that conversation.
+
+**Files changed:**
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The ticket detail Conversation field now renders as a router link only when the current user is the ticket creator/conversation owner. Other users who can view the ticket still see the conversation ID for context, but it is read-only and cannot navigate into that chat.
+
+**Why this approach:** The backend remains the source of truth for conversation access, while the frontend no longer advertises an action that ITAgent/Admin users should not use when the chat belongs to another employee.
+
+**Alternatives considered:** Hiding the conversation ID entirely was not chosen because agents and admins may still need traceability while reviewing a ticket.
+
+**Follow-ups / risks:** If backend ticket detail later returns a dedicated `canOpenConversation` flag, the frontend should use that instead of deriving ownership from `createdBy.id`.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend ticket status controls
+
+**Prompt/task summary:** Continue the status workflow by wiring the frontend Tickets detail page to the backend status update endpoint.
+
+**Files changed:**
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a `PATCH /tickets/{id}/status` client method and a next-status action in Ticket detail. The UI shows the action only for `ITAgent` and `ITAdmin`, advances `Open -> InProgress -> Resolved -> Closed`, and synchronizes the selected detail and list item after a successful update.
+
+**Why this approach:** A next-status button keeps the first workflow simple and prevents users from jumping to invalid states. Backend authorization and transition checks remain the source of truth; frontend role checks only keep the UI clean.
+
+**Alternatives considered:** A free-form status dropdown was rejected for this slice because it exposes invalid choices that the backend would reject. Employee close/confirm-resolved controls remain deferred to a dedicated workflow slice.
+
+**Follow-ups / risks:** Add assignment controls before agent-owned queues become more complex. Add frontend tests around role-specific rendering once the Tickets page has component-level test coverage.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add backend ticket status workflow
+
+**Prompt/task summary:** Implement the backend ticket status workflow slice before adding frontend status controls.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketStatus/*`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `PATCH /api/v1/tickets/{ticketId}/status` and an Application command that updates ticket status through the v1 lifecycle: `Open -> InProgress -> Resolved -> Closed`. IT admins can update any ticket; IT agents can update tickets assigned to them or unassigned queue tickets; employees cannot update status in this slice.
+
+**Why this approach:** Status transition logic stays on the `Ticket` domain entity, while role/scope authorization stays in the Application command handler. This keeps business rules testable without HTTP or database dependencies and matches the existing Clean Architecture boundaries.
+
+**Alternatives considered:** Letting employees close tickets immediately was deferred to a separate confirm-resolved/close-own-ticket slice because it changes the support workflow semantics. Allowing backward transitions or reopen was also deferred to keep the first lifecycle strict and predictable.
+
+**Follow-ups / risks:** Frontend controls still need to call this endpoint. Reopen/escalation rules are future slices.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Link ticket detail back to chat conversation
 
 **Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
@@ -292,6 +360,53 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add frontend ticket status controls
+
+**Prompt/task summary:** Continue the status workflow by wiring the frontend Tickets detail page to the backend status update endpoint.
+
+**Files changed:**
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a `PATCH /tickets/{id}/status` client method and a next-status action in Ticket detail. The UI shows the action only for `ITAgent` and `ITAdmin`, advances `Open -> InProgress -> Resolved -> Closed`, and synchronizes the selected detail and list item after a successful update.
+
+**Why this approach:** A next-status button keeps the first workflow simple and prevents users from jumping to invalid states. Backend authorization and transition checks remain the source of truth; frontend role checks only keep the UI clean.
+
+**Alternatives considered:** A free-form status dropdown was rejected for this slice because it exposes invalid choices that the backend would reject. Employee close/confirm-resolved controls remain deferred to a dedicated workflow slice.
+
+**Follow-ups / risks:** Add assignment controls before agent-owned queues become more complex. Add frontend tests around role-specific rendering once the Tickets page has component-level test coverage.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add backend ticket status workflow
+
+**Prompt/task summary:** Implement the backend ticket status workflow slice before adding frontend status controls.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketStatus/*`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `PATCH /api/v1/tickets/{ticketId}/status` and an Application command that updates ticket status through the v1 lifecycle: `Open -> InProgress -> Resolved -> Closed`. IT admins can update any ticket; IT agents can update tickets assigned to them or unassigned queue tickets; employees cannot update status in this slice.
+
+**Why this approach:** Status transition logic stays on the `Ticket` domain entity, while role/scope authorization stays in the Application command handler. This keeps business rules testable without HTTP or database dependencies and matches the existing Clean Architecture boundaries.
+
+**Alternatives considered:** Letting employees close tickets immediately was deferred to a separate confirm-resolved/close-own-ticket slice because it changes the support workflow semantics. Allowing backward transitions or reopen was also deferred to keep the first lifecycle strict and predictable.
+
+**Follow-ups / risks:** Frontend controls still need to call this endpoint. Reopen/escalation rules are future slices.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Link ticket detail back to chat conversation
 
 **Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
@@ -438,6 +553,53 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add frontend ticket status controls
+
+**Prompt/task summary:** Continue the status workflow by wiring the frontend Tickets detail page to the backend status update endpoint.
+
+**Files changed:**
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a `PATCH /tickets/{id}/status` client method and a next-status action in Ticket detail. The UI shows the action only for `ITAgent` and `ITAdmin`, advances `Open -> InProgress -> Resolved -> Closed`, and synchronizes the selected detail and list item after a successful update.
+
+**Why this approach:** A next-status button keeps the first workflow simple and prevents users from jumping to invalid states. Backend authorization and transition checks remain the source of truth; frontend role checks only keep the UI clean.
+
+**Alternatives considered:** A free-form status dropdown was rejected for this slice because it exposes invalid choices that the backend would reject. Employee close/confirm-resolved controls remain deferred to a dedicated workflow slice.
+
+**Follow-ups / risks:** Add assignment controls before agent-owned queues become more complex. Add frontend tests around role-specific rendering once the Tickets page has component-level test coverage.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add backend ticket status workflow
+
+**Prompt/task summary:** Implement the backend ticket status workflow slice before adding frontend status controls.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketStatus/*`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `PATCH /api/v1/tickets/{ticketId}/status` and an Application command that updates ticket status through the v1 lifecycle: `Open -> InProgress -> Resolved -> Closed`. IT admins can update any ticket; IT agents can update tickets assigned to them or unassigned queue tickets; employees cannot update status in this slice.
+
+**Why this approach:** Status transition logic stays on the `Ticket` domain entity, while role/scope authorization stays in the Application command handler. This keeps business rules testable without HTTP or database dependencies and matches the existing Clean Architecture boundaries.
+
+**Alternatives considered:** Letting employees close tickets immediately was deferred to a separate confirm-resolved/close-own-ticket slice because it changes the support workflow semantics. Allowing backward transitions or reopen was also deferred to keep the first lifecycle strict and predictable.
+
+**Follow-ups / risks:** Frontend controls still need to call this endpoint. Reopen/escalation rules are future slices.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Link ticket detail back to chat conversation
 
 **Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
@@ -584,6 +746,53 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add frontend ticket status controls
+
+**Prompt/task summary:** Continue the status workflow by wiring the frontend Tickets detail page to the backend status update endpoint.
+
+**Files changed:**
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a `PATCH /tickets/{id}/status` client method and a next-status action in Ticket detail. The UI shows the action only for `ITAgent` and `ITAdmin`, advances `Open -> InProgress -> Resolved -> Closed`, and synchronizes the selected detail and list item after a successful update.
+
+**Why this approach:** A next-status button keeps the first workflow simple and prevents users from jumping to invalid states. Backend authorization and transition checks remain the source of truth; frontend role checks only keep the UI clean.
+
+**Alternatives considered:** A free-form status dropdown was rejected for this slice because it exposes invalid choices that the backend would reject. Employee close/confirm-resolved controls remain deferred to a dedicated workflow slice.
+
+**Follow-ups / risks:** Add assignment controls before agent-owned queues become more complex. Add frontend tests around role-specific rendering once the Tickets page has component-level test coverage.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add backend ticket status workflow
+
+**Prompt/task summary:** Implement the backend ticket status workflow slice before adding frontend status controls.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketStatus/*`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `PATCH /api/v1/tickets/{ticketId}/status` and an Application command that updates ticket status through the v1 lifecycle: `Open -> InProgress -> Resolved -> Closed`. IT admins can update any ticket; IT agents can update tickets assigned to them or unassigned queue tickets; employees cannot update status in this slice.
+
+**Why this approach:** Status transition logic stays on the `Ticket` domain entity, while role/scope authorization stays in the Application command handler. This keeps business rules testable without HTTP or database dependencies and matches the existing Clean Architecture boundaries.
+
+**Alternatives considered:** Letting employees close tickets immediately was deferred to a separate confirm-resolved/close-own-ticket slice because it changes the support workflow semantics. Allowing backward transitions or reopen was also deferred to keep the first lifecycle strict and predictable.
+
+**Follow-ups / risks:** Frontend controls still need to call this endpoint. Reopen/escalation rules are future slices.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Link ticket detail back to chat conversation
 
 **Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
@@ -733,6 +942,53 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add frontend ticket status controls
+
+**Prompt/task summary:** Continue the status workflow by wiring the frontend Tickets detail page to the backend status update endpoint.
+
+**Files changed:**
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a `PATCH /tickets/{id}/status` client method and a next-status action in Ticket detail. The UI shows the action only for `ITAgent` and `ITAdmin`, advances `Open -> InProgress -> Resolved -> Closed`, and synchronizes the selected detail and list item after a successful update.
+
+**Why this approach:** A next-status button keeps the first workflow simple and prevents users from jumping to invalid states. Backend authorization and transition checks remain the source of truth; frontend role checks only keep the UI clean.
+
+**Alternatives considered:** A free-form status dropdown was rejected for this slice because it exposes invalid choices that the backend would reject. Employee close/confirm-resolved controls remain deferred to a dedicated workflow slice.
+
+**Follow-ups / risks:** Add assignment controls before agent-owned queues become more complex. Add frontend tests around role-specific rendering once the Tickets page has component-level test coverage.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add backend ticket status workflow
+
+**Prompt/task summary:** Implement the backend ticket status workflow slice before adding frontend status controls.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketStatus/*`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `PATCH /api/v1/tickets/{ticketId}/status` and an Application command that updates ticket status through the v1 lifecycle: `Open -> InProgress -> Resolved -> Closed`. IT admins can update any ticket; IT agents can update tickets assigned to them or unassigned queue tickets; employees cannot update status in this slice.
+
+**Why this approach:** Status transition logic stays on the `Ticket` domain entity, while role/scope authorization stays in the Application command handler. This keeps business rules testable without HTTP or database dependencies and matches the existing Clean Architecture boundaries.
+
+**Alternatives considered:** Letting employees close tickets immediately was deferred to a separate confirm-resolved/close-own-ticket slice because it changes the support workflow semantics. Allowing backward transitions or reopen was also deferred to keep the first lifecycle strict and predictable.
+
+**Follow-ups / risks:** Frontend controls still need to call this endpoint. Reopen/escalation rules are future slices.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Link ticket detail back to chat conversation
 
 **Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
@@ -885,6 +1141,53 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add frontend ticket status controls
+
+**Prompt/task summary:** Continue the status workflow by wiring the frontend Tickets detail page to the backend status update endpoint.
+
+**Files changed:**
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a `PATCH /tickets/{id}/status` client method and a next-status action in Ticket detail. The UI shows the action only for `ITAgent` and `ITAdmin`, advances `Open -> InProgress -> Resolved -> Closed`, and synchronizes the selected detail and list item after a successful update.
+
+**Why this approach:** A next-status button keeps the first workflow simple and prevents users from jumping to invalid states. Backend authorization and transition checks remain the source of truth; frontend role checks only keep the UI clean.
+
+**Alternatives considered:** A free-form status dropdown was rejected for this slice because it exposes invalid choices that the backend would reject. Employee close/confirm-resolved controls remain deferred to a dedicated workflow slice.
+
+**Follow-ups / risks:** Add assignment controls before agent-owned queues become more complex. Add frontend tests around role-specific rendering once the Tickets page has component-level test coverage.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add backend ticket status workflow
+
+**Prompt/task summary:** Implement the backend ticket status workflow slice before adding frontend status controls.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketStatus/*`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `PATCH /api/v1/tickets/{ticketId}/status` and an Application command that updates ticket status through the v1 lifecycle: `Open -> InProgress -> Resolved -> Closed`. IT admins can update any ticket; IT agents can update tickets assigned to them or unassigned queue tickets; employees cannot update status in this slice.
+
+**Why this approach:** Status transition logic stays on the `Ticket` domain entity, while role/scope authorization stays in the Application command handler. This keeps business rules testable without HTTP or database dependencies and matches the existing Clean Architecture boundaries.
+
+**Alternatives considered:** Letting employees close tickets immediately was deferred to a separate confirm-resolved/close-own-ticket slice because it changes the support workflow semantics. Allowing backward transitions or reopen was also deferred to keep the first lifecycle strict and predictable.
+
+**Follow-ups / risks:** Frontend controls still need to call this endpoint. Reopen/escalation rules are future slices.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Link ticket detail back to chat conversation
 
 **Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
@@ -1031,6 +1334,53 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add frontend ticket status controls
+
+**Prompt/task summary:** Continue the status workflow by wiring the frontend Tickets detail page to the backend status update endpoint.
+
+**Files changed:**
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a `PATCH /tickets/{id}/status` client method and a next-status action in Ticket detail. The UI shows the action only for `ITAgent` and `ITAdmin`, advances `Open -> InProgress -> Resolved -> Closed`, and synchronizes the selected detail and list item after a successful update.
+
+**Why this approach:** A next-status button keeps the first workflow simple and prevents users from jumping to invalid states. Backend authorization and transition checks remain the source of truth; frontend role checks only keep the UI clean.
+
+**Alternatives considered:** A free-form status dropdown was rejected for this slice because it exposes invalid choices that the backend would reject. Employee close/confirm-resolved controls remain deferred to a dedicated workflow slice.
+
+**Follow-ups / risks:** Add assignment controls before agent-owned queues become more complex. Add frontend tests around role-specific rendering once the Tickets page has component-level test coverage.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add backend ticket status workflow
+
+**Prompt/task summary:** Implement the backend ticket status workflow slice before adding frontend status controls.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketStatus/*`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `PATCH /api/v1/tickets/{ticketId}/status` and an Application command that updates ticket status through the v1 lifecycle: `Open -> InProgress -> Resolved -> Closed`. IT admins can update any ticket; IT agents can update tickets assigned to them or unassigned queue tickets; employees cannot update status in this slice.
+
+**Why this approach:** Status transition logic stays on the `Ticket` domain entity, while role/scope authorization stays in the Application command handler. This keeps business rules testable without HTTP or database dependencies and matches the existing Clean Architecture boundaries.
+
+**Alternatives considered:** Letting employees close tickets immediately was deferred to a separate confirm-resolved/close-own-ticket slice because it changes the support workflow semantics. Allowing backward transitions or reopen was also deferred to keep the first lifecycle strict and predictable.
+
+**Follow-ups / risks:** Frontend controls still need to call this endpoint. Reopen/escalation rules are future slices.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Link ticket detail back to chat conversation
 
 **Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
@@ -1193,6 +1543,53 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add frontend ticket status controls
+
+**Prompt/task summary:** Continue the status workflow by wiring the frontend Tickets detail page to the backend status update endpoint.
+
+**Files changed:**
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a `PATCH /tickets/{id}/status` client method and a next-status action in Ticket detail. The UI shows the action only for `ITAgent` and `ITAdmin`, advances `Open -> InProgress -> Resolved -> Closed`, and synchronizes the selected detail and list item after a successful update.
+
+**Why this approach:** A next-status button keeps the first workflow simple and prevents users from jumping to invalid states. Backend authorization and transition checks remain the source of truth; frontend role checks only keep the UI clean.
+
+**Alternatives considered:** A free-form status dropdown was rejected for this slice because it exposes invalid choices that the backend would reject. Employee close/confirm-resolved controls remain deferred to a dedicated workflow slice.
+
+**Follow-ups / risks:** Add assignment controls before agent-owned queues become more complex. Add frontend tests around role-specific rendering once the Tickets page has component-level test coverage.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add backend ticket status workflow
+
+**Prompt/task summary:** Implement the backend ticket status workflow slice before adding frontend status controls.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketStatus/*`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `PATCH /api/v1/tickets/{ticketId}/status` and an Application command that updates ticket status through the v1 lifecycle: `Open -> InProgress -> Resolved -> Closed`. IT admins can update any ticket; IT agents can update tickets assigned to them or unassigned queue tickets; employees cannot update status in this slice.
+
+**Why this approach:** Status transition logic stays on the `Ticket` domain entity, while role/scope authorization stays in the Application command handler. This keeps business rules testable without HTTP or database dependencies and matches the existing Clean Architecture boundaries.
+
+**Alternatives considered:** Letting employees close tickets immediately was deferred to a separate confirm-resolved/close-own-ticket slice because it changes the support workflow semantics. Allowing backward transitions or reopen was also deferred to keep the first lifecycle strict and predictable.
+
+**Follow-ups / risks:** Frontend controls still need to call this endpoint. Reopen/escalation rules are future slices.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Link ticket detail back to chat conversation
 
 **Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
@@ -1355,6 +1752,53 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add frontend ticket status controls
+
+**Prompt/task summary:** Continue the status workflow by wiring the frontend Tickets detail page to the backend status update endpoint.
+
+**Files changed:**
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a `PATCH /tickets/{id}/status` client method and a next-status action in Ticket detail. The UI shows the action only for `ITAgent` and `ITAdmin`, advances `Open -> InProgress -> Resolved -> Closed`, and synchronizes the selected detail and list item after a successful update.
+
+**Why this approach:** A next-status button keeps the first workflow simple and prevents users from jumping to invalid states. Backend authorization and transition checks remain the source of truth; frontend role checks only keep the UI clean.
+
+**Alternatives considered:** A free-form status dropdown was rejected for this slice because it exposes invalid choices that the backend would reject. Employee close/confirm-resolved controls remain deferred to a dedicated workflow slice.
+
+**Follow-ups / risks:** Add assignment controls before agent-owned queues become more complex. Add frontend tests around role-specific rendering once the Tickets page has component-level test coverage.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add backend ticket status workflow
+
+**Prompt/task summary:** Implement the backend ticket status workflow slice before adding frontend status controls.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketStatus/*`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `PATCH /api/v1/tickets/{ticketId}/status` and an Application command that updates ticket status through the v1 lifecycle: `Open -> InProgress -> Resolved -> Closed`. IT admins can update any ticket; IT agents can update tickets assigned to them or unassigned queue tickets; employees cannot update status in this slice.
+
+**Why this approach:** Status transition logic stays on the `Ticket` domain entity, while role/scope authorization stays in the Application command handler. This keeps business rules testable without HTTP or database dependencies and matches the existing Clean Architecture boundaries.
+
+**Alternatives considered:** Letting employees close tickets immediately was deferred to a separate confirm-resolved/close-own-ticket slice because it changes the support workflow semantics. Allowing backward transitions or reopen was also deferred to keep the first lifecycle strict and predictable.
+
+**Follow-ups / risks:** Frontend controls still need to call this endpoint. Reopen/escalation rules are future slices.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Link ticket detail back to chat conversation
 
 **Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
@@ -1501,6 +1945,53 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add frontend ticket status controls
+
+**Prompt/task summary:** Continue the status workflow by wiring the frontend Tickets detail page to the backend status update endpoint.
+
+**Files changed:**
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a `PATCH /tickets/{id}/status` client method and a next-status action in Ticket detail. The UI shows the action only for `ITAgent` and `ITAdmin`, advances `Open -> InProgress -> Resolved -> Closed`, and synchronizes the selected detail and list item after a successful update.
+
+**Why this approach:** A next-status button keeps the first workflow simple and prevents users from jumping to invalid states. Backend authorization and transition checks remain the source of truth; frontend role checks only keep the UI clean.
+
+**Alternatives considered:** A free-form status dropdown was rejected for this slice because it exposes invalid choices that the backend would reject. Employee close/confirm-resolved controls remain deferred to a dedicated workflow slice.
+
+**Follow-ups / risks:** Add assignment controls before agent-owned queues become more complex. Add frontend tests around role-specific rendering once the Tickets page has component-level test coverage.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add backend ticket status workflow
+
+**Prompt/task summary:** Implement the backend ticket status workflow slice before adding frontend status controls.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketStatus/*`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `PATCH /api/v1/tickets/{ticketId}/status` and an Application command that updates ticket status through the v1 lifecycle: `Open -> InProgress -> Resolved -> Closed`. IT admins can update any ticket; IT agents can update tickets assigned to them or unassigned queue tickets; employees cannot update status in this slice.
+
+**Why this approach:** Status transition logic stays on the `Ticket` domain entity, while role/scope authorization stays in the Application command handler. This keeps business rules testable without HTTP or database dependencies and matches the existing Clean Architecture boundaries.
+
+**Alternatives considered:** Letting employees close tickets immediately was deferred to a separate confirm-resolved/close-own-ticket slice because it changes the support workflow semantics. Allowing backward transitions or reopen was also deferred to keep the first lifecycle strict and predictable.
+
+**Follow-ups / risks:** Frontend controls still need to call this endpoint. Reopen/escalation rules are future slices.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Link ticket detail back to chat conversation
 
 **Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
@@ -1647,6 +2138,53 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add frontend ticket status controls
+
+**Prompt/task summary:** Continue the status workflow by wiring the frontend Tickets detail page to the backend status update endpoint.
+
+**Files changed:**
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a `PATCH /tickets/{id}/status` client method and a next-status action in Ticket detail. The UI shows the action only for `ITAgent` and `ITAdmin`, advances `Open -> InProgress -> Resolved -> Closed`, and synchronizes the selected detail and list item after a successful update.
+
+**Why this approach:** A next-status button keeps the first workflow simple and prevents users from jumping to invalid states. Backend authorization and transition checks remain the source of truth; frontend role checks only keep the UI clean.
+
+**Alternatives considered:** A free-form status dropdown was rejected for this slice because it exposes invalid choices that the backend would reject. Employee close/confirm-resolved controls remain deferred to a dedicated workflow slice.
+
+**Follow-ups / risks:** Add assignment controls before agent-owned queues become more complex. Add frontend tests around role-specific rendering once the Tickets page has component-level test coverage.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add backend ticket status workflow
+
+**Prompt/task summary:** Implement the backend ticket status workflow slice before adding frontend status controls.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketStatus/*`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `PATCH /api/v1/tickets/{ticketId}/status` and an Application command that updates ticket status through the v1 lifecycle: `Open -> InProgress -> Resolved -> Closed`. IT admins can update any ticket; IT agents can update tickets assigned to them or unassigned queue tickets; employees cannot update status in this slice.
+
+**Why this approach:** Status transition logic stays on the `Ticket` domain entity, while role/scope authorization stays in the Application command handler. This keeps business rules testable without HTTP or database dependencies and matches the existing Clean Architecture boundaries.
+
+**Alternatives considered:** Letting employees close tickets immediately was deferred to a separate confirm-resolved/close-own-ticket slice because it changes the support workflow semantics. Allowing backward transitions or reopen was also deferred to keep the first lifecycle strict and predictable.
+
+**Follow-ups / risks:** Frontend controls still need to call this endpoint. Reopen/escalation rules are future slices.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Link ticket detail back to chat conversation
 
 **Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
@@ -1798,6 +2336,53 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add frontend ticket status controls
+
+**Prompt/task summary:** Continue the status workflow by wiring the frontend Tickets detail page to the backend status update endpoint.
+
+**Files changed:**
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a `PATCH /tickets/{id}/status` client method and a next-status action in Ticket detail. The UI shows the action only for `ITAgent` and `ITAdmin`, advances `Open -> InProgress -> Resolved -> Closed`, and synchronizes the selected detail and list item after a successful update.
+
+**Why this approach:** A next-status button keeps the first workflow simple and prevents users from jumping to invalid states. Backend authorization and transition checks remain the source of truth; frontend role checks only keep the UI clean.
+
+**Alternatives considered:** A free-form status dropdown was rejected for this slice because it exposes invalid choices that the backend would reject. Employee close/confirm-resolved controls remain deferred to a dedicated workflow slice.
+
+**Follow-ups / risks:** Add assignment controls before agent-owned queues become more complex. Add frontend tests around role-specific rendering once the Tickets page has component-level test coverage.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add backend ticket status workflow
+
+**Prompt/task summary:** Implement the backend ticket status workflow slice before adding frontend status controls.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketStatus/*`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `PATCH /api/v1/tickets/{ticketId}/status` and an Application command that updates ticket status through the v1 lifecycle: `Open -> InProgress -> Resolved -> Closed`. IT admins can update any ticket; IT agents can update tickets assigned to them or unassigned queue tickets; employees cannot update status in this slice.
+
+**Why this approach:** Status transition logic stays on the `Ticket` domain entity, while role/scope authorization stays in the Application command handler. This keeps business rules testable without HTTP or database dependencies and matches the existing Clean Architecture boundaries.
+
+**Alternatives considered:** Letting employees close tickets immediately was deferred to a separate confirm-resolved/close-own-ticket slice because it changes the support workflow semantics. Allowing backward transitions or reopen was also deferred to keep the first lifecycle strict and predictable.
+
+**Follow-ups / risks:** Frontend controls still need to call this endpoint. Reopen/escalation rules are future slices.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Link ticket detail back to chat conversation
 
 **Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
@@ -1952,6 +2537,53 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add frontend ticket status controls
+
+**Prompt/task summary:** Continue the status workflow by wiring the frontend Tickets detail page to the backend status update endpoint.
+
+**Files changed:**
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a `PATCH /tickets/{id}/status` client method and a next-status action in Ticket detail. The UI shows the action only for `ITAgent` and `ITAdmin`, advances `Open -> InProgress -> Resolved -> Closed`, and synchronizes the selected detail and list item after a successful update.
+
+**Why this approach:** A next-status button keeps the first workflow simple and prevents users from jumping to invalid states. Backend authorization and transition checks remain the source of truth; frontend role checks only keep the UI clean.
+
+**Alternatives considered:** A free-form status dropdown was rejected for this slice because it exposes invalid choices that the backend would reject. Employee close/confirm-resolved controls remain deferred to a dedicated workflow slice.
+
+**Follow-ups / risks:** Add assignment controls before agent-owned queues become more complex. Add frontend tests around role-specific rendering once the Tickets page has component-level test coverage.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add backend ticket status workflow
+
+**Prompt/task summary:** Implement the backend ticket status workflow slice before adding frontend status controls.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketStatus/*`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `PATCH /api/v1/tickets/{ticketId}/status` and an Application command that updates ticket status through the v1 lifecycle: `Open -> InProgress -> Resolved -> Closed`. IT admins can update any ticket; IT agents can update tickets assigned to them or unassigned queue tickets; employees cannot update status in this slice.
+
+**Why this approach:** Status transition logic stays on the `Ticket` domain entity, while role/scope authorization stays in the Application command handler. This keeps business rules testable without HTTP or database dependencies and matches the existing Clean Architecture boundaries.
+
+**Alternatives considered:** Letting employees close tickets immediately was deferred to a separate confirm-resolved/close-own-ticket slice because it changes the support workflow semantics. Allowing backward transitions or reopen was also deferred to keep the first lifecycle strict and predictable.
+
+**Follow-ups / risks:** Frontend controls still need to call this endpoint. Reopen/escalation rules are future slices.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Link ticket detail back to chat conversation
 
 **Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
@@ -2116,6 +2748,53 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add frontend ticket status controls
+
+**Prompt/task summary:** Continue the status workflow by wiring the frontend Tickets detail page to the backend status update endpoint.
+
+**Files changed:**
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a `PATCH /tickets/{id}/status` client method and a next-status action in Ticket detail. The UI shows the action only for `ITAgent` and `ITAdmin`, advances `Open -> InProgress -> Resolved -> Closed`, and synchronizes the selected detail and list item after a successful update.
+
+**Why this approach:** A next-status button keeps the first workflow simple and prevents users from jumping to invalid states. Backend authorization and transition checks remain the source of truth; frontend role checks only keep the UI clean.
+
+**Alternatives considered:** A free-form status dropdown was rejected for this slice because it exposes invalid choices that the backend would reject. Employee close/confirm-resolved controls remain deferred to a dedicated workflow slice.
+
+**Follow-ups / risks:** Add assignment controls before agent-owned queues become more complex. Add frontend tests around role-specific rendering once the Tickets page has component-level test coverage.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add backend ticket status workflow
+
+**Prompt/task summary:** Implement the backend ticket status workflow slice before adding frontend status controls.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketStatus/*`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `PATCH /api/v1/tickets/{ticketId}/status` and an Application command that updates ticket status through the v1 lifecycle: `Open -> InProgress -> Resolved -> Closed`. IT admins can update any ticket; IT agents can update tickets assigned to them or unassigned queue tickets; employees cannot update status in this slice.
+
+**Why this approach:** Status transition logic stays on the `Ticket` domain entity, while role/scope authorization stays in the Application command handler. This keeps business rules testable without HTTP or database dependencies and matches the existing Clean Architecture boundaries.
+
+**Alternatives considered:** Letting employees close tickets immediately was deferred to a separate confirm-resolved/close-own-ticket slice because it changes the support workflow semantics. Allowing backward transitions or reopen was also deferred to keep the first lifecycle strict and predictable.
+
+**Follow-ups / risks:** Frontend controls still need to call this endpoint. Reopen/escalation rules are future slices.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Link ticket detail back to chat conversation
 
 **Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
@@ -2268,6 +2947,53 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add frontend ticket status controls
+
+**Prompt/task summary:** Continue the status workflow by wiring the frontend Tickets detail page to the backend status update endpoint.
+
+**Files changed:**
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a `PATCH /tickets/{id}/status` client method and a next-status action in Ticket detail. The UI shows the action only for `ITAgent` and `ITAdmin`, advances `Open -> InProgress -> Resolved -> Closed`, and synchronizes the selected detail and list item after a successful update.
+
+**Why this approach:** A next-status button keeps the first workflow simple and prevents users from jumping to invalid states. Backend authorization and transition checks remain the source of truth; frontend role checks only keep the UI clean.
+
+**Alternatives considered:** A free-form status dropdown was rejected for this slice because it exposes invalid choices that the backend would reject. Employee close/confirm-resolved controls remain deferred to a dedicated workflow slice.
+
+**Follow-ups / risks:** Add assignment controls before agent-owned queues become more complex. Add frontend tests around role-specific rendering once the Tickets page has component-level test coverage.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add backend ticket status workflow
+
+**Prompt/task summary:** Implement the backend ticket status workflow slice before adding frontend status controls.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketStatus/*`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `PATCH /api/v1/tickets/{ticketId}/status` and an Application command that updates ticket status through the v1 lifecycle: `Open -> InProgress -> Resolved -> Closed`. IT admins can update any ticket; IT agents can update tickets assigned to them or unassigned queue tickets; employees cannot update status in this slice.
+
+**Why this approach:** Status transition logic stays on the `Ticket` domain entity, while role/scope authorization stays in the Application command handler. This keeps business rules testable without HTTP or database dependencies and matches the existing Clean Architecture boundaries.
+
+**Alternatives considered:** Letting employees close tickets immediately was deferred to a separate confirm-resolved/close-own-ticket slice because it changes the support workflow semantics. Allowing backward transitions or reopen was also deferred to keep the first lifecycle strict and predictable.
+
+**Follow-ups / risks:** Frontend controls still need to call this endpoint. Reopen/escalation rules are future slices.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Link ticket detail back to chat conversation
 
 **Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
@@ -2439,6 +3165,53 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add frontend ticket status controls
+
+**Prompt/task summary:** Continue the status workflow by wiring the frontend Tickets detail page to the backend status update endpoint.
+
+**Files changed:**
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a `PATCH /tickets/{id}/status` client method and a next-status action in Ticket detail. The UI shows the action only for `ITAgent` and `ITAdmin`, advances `Open -> InProgress -> Resolved -> Closed`, and synchronizes the selected detail and list item after a successful update.
+
+**Why this approach:** A next-status button keeps the first workflow simple and prevents users from jumping to invalid states. Backend authorization and transition checks remain the source of truth; frontend role checks only keep the UI clean.
+
+**Alternatives considered:** A free-form status dropdown was rejected for this slice because it exposes invalid choices that the backend would reject. Employee close/confirm-resolved controls remain deferred to a dedicated workflow slice.
+
+**Follow-ups / risks:** Add assignment controls before agent-owned queues become more complex. Add frontend tests around role-specific rendering once the Tickets page has component-level test coverage.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add backend ticket status workflow
+
+**Prompt/task summary:** Implement the backend ticket status workflow slice before adding frontend status controls.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketStatus/*`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `PATCH /api/v1/tickets/{ticketId}/status` and an Application command that updates ticket status through the v1 lifecycle: `Open -> InProgress -> Resolved -> Closed`. IT admins can update any ticket; IT agents can update tickets assigned to them or unassigned queue tickets; employees cannot update status in this slice.
+
+**Why this approach:** Status transition logic stays on the `Ticket` domain entity, while role/scope authorization stays in the Application command handler. This keeps business rules testable without HTTP or database dependencies and matches the existing Clean Architecture boundaries.
+
+**Alternatives considered:** Letting employees close tickets immediately was deferred to a separate confirm-resolved/close-own-ticket slice because it changes the support workflow semantics. Allowing backward transitions or reopen was also deferred to keep the first lifecycle strict and predictable.
+
+**Follow-ups / risks:** Frontend controls still need to call this endpoint. Reopen/escalation rules are future slices.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Link ticket detail back to chat conversation
 
 **Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
@@ -2587,6 +3360,53 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add frontend ticket status controls
+
+**Prompt/task summary:** Continue the status workflow by wiring the frontend Tickets detail page to the backend status update endpoint.
+
+**Files changed:**
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a `PATCH /tickets/{id}/status` client method and a next-status action in Ticket detail. The UI shows the action only for `ITAgent` and `ITAdmin`, advances `Open -> InProgress -> Resolved -> Closed`, and synchronizes the selected detail and list item after a successful update.
+
+**Why this approach:** A next-status button keeps the first workflow simple and prevents users from jumping to invalid states. Backend authorization and transition checks remain the source of truth; frontend role checks only keep the UI clean.
+
+**Alternatives considered:** A free-form status dropdown was rejected for this slice because it exposes invalid choices that the backend would reject. Employee close/confirm-resolved controls remain deferred to a dedicated workflow slice.
+
+**Follow-ups / risks:** Add assignment controls before agent-owned queues become more complex. Add frontend tests around role-specific rendering once the Tickets page has component-level test coverage.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add backend ticket status workflow
+
+**Prompt/task summary:** Implement the backend ticket status workflow slice before adding frontend status controls.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketStatus/*`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `PATCH /api/v1/tickets/{ticketId}/status` and an Application command that updates ticket status through the v1 lifecycle: `Open -> InProgress -> Resolved -> Closed`. IT admins can update any ticket; IT agents can update tickets assigned to them or unassigned queue tickets; employees cannot update status in this slice.
+
+**Why this approach:** Status transition logic stays on the `Ticket` domain entity, while role/scope authorization stays in the Application command handler. This keeps business rules testable without HTTP or database dependencies and matches the existing Clean Architecture boundaries.
+
+**Alternatives considered:** Letting employees close tickets immediately was deferred to a separate confirm-resolved/close-own-ticket slice because it changes the support workflow semantics. Allowing backward transitions or reopen was also deferred to keep the first lifecycle strict and predictable.
+
+**Follow-ups / risks:** Frontend controls still need to call this endpoint. Reopen/escalation rules are future slices.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Link ticket detail back to chat conversation
 
 **Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
@@ -2735,6 +3555,53 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Add frontend ticket status controls
+
+**Prompt/task summary:** Continue the status workflow by wiring the frontend Tickets detail page to the backend status update endpoint.
+
+**Files changed:**
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a `PATCH /tickets/{id}/status` client method and a next-status action in Ticket detail. The UI shows the action only for `ITAgent` and `ITAdmin`, advances `Open -> InProgress -> Resolved -> Closed`, and synchronizes the selected detail and list item after a successful update.
+
+**Why this approach:** A next-status button keeps the first workflow simple and prevents users from jumping to invalid states. Backend authorization and transition checks remain the source of truth; frontend role checks only keep the UI clean.
+
+**Alternatives considered:** A free-form status dropdown was rejected for this slice because it exposes invalid choices that the backend would reject. Employee close/confirm-resolved controls remain deferred to a dedicated workflow slice.
+
+**Follow-ups / risks:** Add assignment controls before agent-owned queues become more complex. Add frontend tests around role-specific rendering once the Tickets page has component-level test coverage.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add backend ticket status workflow
+
+**Prompt/task summary:** Implement the backend ticket status workflow slice before adding frontend status controls.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketStatus/*`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `PATCH /api/v1/tickets/{ticketId}/status` and an Application command that updates ticket status through the v1 lifecycle: `Open -> InProgress -> Resolved -> Closed`. IT admins can update any ticket; IT agents can update tickets assigned to them or unassigned queue tickets; employees cannot update status in this slice.
+
+**Why this approach:** Status transition logic stays on the `Ticket` domain entity, while role/scope authorization stays in the Application command handler. This keeps business rules testable without HTTP or database dependencies and matches the existing Clean Architecture boundaries.
+
+**Alternatives considered:** Letting employees close tickets immediately was deferred to a separate confirm-resolved/close-own-ticket slice because it changes the support workflow semantics. Allowing backward transitions or reopen was also deferred to keep the first lifecycle strict and predictable.
+
+**Follow-ups / risks:** Frontend controls still need to call this endpoint. Reopen/escalation rules are future slices.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Link ticket detail back to chat conversation
 
 **Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
@@ -2912,6 +3779,53 @@ API/web containers are a later compose expansion.
 
 ---
 
+## [2026-08-01] Add frontend ticket status controls
+
+**Prompt/task summary:** Continue the status workflow by wiring the frontend Tickets detail page to the backend status update endpoint.
+
+**Files changed:**
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a `PATCH /tickets/{id}/status` client method and a next-status action in Ticket detail. The UI shows the action only for `ITAgent` and `ITAdmin`, advances `Open -> InProgress -> Resolved -> Closed`, and synchronizes the selected detail and list item after a successful update.
+
+**Why this approach:** A next-status button keeps the first workflow simple and prevents users from jumping to invalid states. Backend authorization and transition checks remain the source of truth; frontend role checks only keep the UI clean.
+
+**Alternatives considered:** A free-form status dropdown was rejected for this slice because it exposes invalid choices that the backend would reject. Employee close/confirm-resolved controls remain deferred to a dedicated workflow slice.
+
+**Follow-ups / risks:** Add assignment controls before agent-owned queues become more complex. Add frontend tests around role-specific rendering once the Tickets page has component-level test coverage.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add backend ticket status workflow
+
+**Prompt/task summary:** Implement the backend ticket status workflow slice before adding frontend status controls.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketStatus/*`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `PATCH /api/v1/tickets/{ticketId}/status` and an Application command that updates ticket status through the v1 lifecycle: `Open -> InProgress -> Resolved -> Closed`. IT admins can update any ticket; IT agents can update tickets assigned to them or unassigned queue tickets; employees cannot update status in this slice.
+
+**Why this approach:** Status transition logic stays on the `Ticket` domain entity, while role/scope authorization stays in the Application command handler. This keeps business rules testable without HTTP or database dependencies and matches the existing Clean Architecture boundaries.
+
+**Alternatives considered:** Letting employees close tickets immediately was deferred to a separate confirm-resolved/close-own-ticket slice because it changes the support workflow semantics. Allowing backward transitions or reopen was also deferred to keep the first lifecycle strict and predictable.
+
+**Follow-ups / risks:** Frontend controls still need to call this endpoint. Reopen/escalation rules are future slices.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Link ticket detail back to chat conversation
 
 **Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
@@ -3121,6 +4035,53 @@ commands are scoped to this directory.
 
 ---
 
+## [2026-08-01] Add frontend ticket status controls
+
+**Prompt/task summary:** Continue the status workflow by wiring the frontend Tickets detail page to the backend status update endpoint.
+
+**Files changed:**
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a `PATCH /tickets/{id}/status` client method and a next-status action in Ticket detail. The UI shows the action only for `ITAgent` and `ITAdmin`, advances `Open -> InProgress -> Resolved -> Closed`, and synchronizes the selected detail and list item after a successful update.
+
+**Why this approach:** A next-status button keeps the first workflow simple and prevents users from jumping to invalid states. Backend authorization and transition checks remain the source of truth; frontend role checks only keep the UI clean.
+
+**Alternatives considered:** A free-form status dropdown was rejected for this slice because it exposes invalid choices that the backend would reject. Employee close/confirm-resolved controls remain deferred to a dedicated workflow slice.
+
+**Follow-ups / risks:** Add assignment controls before agent-owned queues become more complex. Add frontend tests around role-specific rendering once the Tickets page has component-level test coverage.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add backend ticket status workflow
+
+**Prompt/task summary:** Implement the backend ticket status workflow slice before adding frontend status controls.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketStatus/*`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `PATCH /api/v1/tickets/{ticketId}/status` and an Application command that updates ticket status through the v1 lifecycle: `Open -> InProgress -> Resolved -> Closed`. IT admins can update any ticket; IT agents can update tickets assigned to them or unassigned queue tickets; employees cannot update status in this slice.
+
+**Why this approach:** Status transition logic stays on the `Ticket` domain entity, while role/scope authorization stays in the Application command handler. This keeps business rules testable without HTTP or database dependencies and matches the existing Clean Architecture boundaries.
+
+**Alternatives considered:** Letting employees close tickets immediately was deferred to a separate confirm-resolved/close-own-ticket slice because it changes the support workflow semantics. Allowing backward transitions or reopen was also deferred to keep the first lifecycle strict and predictable.
+
+**Follow-ups / risks:** Frontend controls still need to call this endpoint. Reopen/escalation rules are future slices.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Link ticket detail back to chat conversation
 
 **Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
@@ -3268,6 +4229,53 @@ over alternatives, any constraints from `docs/PROJECT_PLAN.md` that drove the de
 
 ---
 
+## [2026-08-01] Add frontend ticket status controls
+
+**Prompt/task summary:** Continue the status workflow by wiring the frontend Tickets detail page to the backend status update endpoint.
+
+**Files changed:**
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a `PATCH /tickets/{id}/status` client method and a next-status action in Ticket detail. The UI shows the action only for `ITAgent` and `ITAdmin`, advances `Open -> InProgress -> Resolved -> Closed`, and synchronizes the selected detail and list item after a successful update.
+
+**Why this approach:** A next-status button keeps the first workflow simple and prevents users from jumping to invalid states. Backend authorization and transition checks remain the source of truth; frontend role checks only keep the UI clean.
+
+**Alternatives considered:** A free-form status dropdown was rejected for this slice because it exposes invalid choices that the backend would reject. Employee close/confirm-resolved controls remain deferred to a dedicated workflow slice.
+
+**Follow-ups / risks:** Add assignment controls before agent-owned queues become more complex. Add frontend tests around role-specific rendering once the Tickets page has component-level test coverage.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add backend ticket status workflow
+
+**Prompt/task summary:** Implement the backend ticket status workflow slice before adding frontend status controls.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketStatus/*`
+- `backend/src/Domain/Entities/Ticket.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `PATCH /api/v1/tickets/{ticketId}/status` and an Application command that updates ticket status through the v1 lifecycle: `Open -> InProgress -> Resolved -> Closed`. IT admins can update any ticket; IT agents can update tickets assigned to them or unassigned queue tickets; employees cannot update status in this slice.
+
+**Why this approach:** Status transition logic stays on the `Ticket` domain entity, while role/scope authorization stays in the Application command handler. This keeps business rules testable without HTTP or database dependencies and matches the existing Clean Architecture boundaries.
+
+**Alternatives considered:** Letting employees close tickets immediately was deferred to a separate confirm-resolved/close-own-ticket slice because it changes the support workflow semantics. Allowing backward transitions or reopen was also deferred to keep the first lifecycle strict and predictable.
+
+**Follow-ups / risks:** Frontend controls still need to call this endpoint. Reopen/escalation rules are future slices.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Link ticket detail back to chat conversation
 
 **Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
@@ -3428,6 +4436,8 @@ approach, which is both testable and framework-agnostic.
 revisit whether the transition graph needs an `Admin` override path.
 
 **Reviewed by human:** [ ]
+
+
 
 
 

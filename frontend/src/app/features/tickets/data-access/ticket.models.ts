@@ -38,3 +38,7 @@ export interface TicketListFilters {
   page?: number;
   pageSize?: number;
 }
+
+export interface UpdateTicketStatusRequest {
+  status: TicketStatus;
+}

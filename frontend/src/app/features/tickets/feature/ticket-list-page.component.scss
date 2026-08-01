@@ -174,10 +174,28 @@ time,
 }
 
 .muted,
+.status-message {
+  margin: 12px 16px 0;
+  border-radius: 6px;
+  background: #ecfdf3;
+  color: #146c43;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
 .error-message {
   padding: 12px 16px;
 }
 
+.status-message {
+  margin: 12px 16px 0;
+  border-radius: 6px;
+  background: #ecfdf3;
+  color: #146c43;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
 .error-message {
   background: #fff1f0;
   color: #a1281f;
@@ -202,6 +220,7 @@ time,
 .priority-pill {
   padding: 8px 10px;
   white-space: nowrap;
+  margin: 12px 16px 0;
 }
 
 .priority.low,
@@ -273,6 +292,14 @@ time,
   color: #17499f;
 }
 
+.context-readonly {
+  cursor: default;
+}
+
+.context-readonly code {
+  color: #52637a;
+}
+
 .context-section code {
   overflow: hidden;
   color: #36465a;
@@ -299,5 +326,6 @@ time,
     grid-template-columns: 1fr;
   }
 }
+
 
 

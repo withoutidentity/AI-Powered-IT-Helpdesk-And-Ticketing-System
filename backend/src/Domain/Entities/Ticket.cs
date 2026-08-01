@@ -76,7 +76,7 @@ public sealed class Ticket
         {
             TicketStatus.Open => target == TicketStatus.InProgress,
             TicketStatus.InProgress => target == TicketStatus.Resolved,
-            TicketStatus.Resolved => target is TicketStatus.Closed or TicketStatus.InProgress,
+            TicketStatus.Resolved => target == TicketStatus.Closed,
             TicketStatus.Closed => false,
             _ => false
         };

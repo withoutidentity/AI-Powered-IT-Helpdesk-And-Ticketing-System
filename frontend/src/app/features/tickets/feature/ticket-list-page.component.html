@@ -51,7 +51,7 @@
             <span class="ticket-title">{{ ticket.title }}</span>
             <span class="ticket-meta">
               <strong [class]="'priority ' + ticket.priority.toLowerCase()">{{ ticket.priority }}</strong>
-              <span>{{ ticket.status }}</span>
+              <span>{{ statusLabel(ticket.status) }}</span>
             </span>
             <time>{{ ticket.createdAt | date: 'short' }}</time>
           </button>
@@ -66,11 +66,22 @@
     } @else if (selectedTicket(); as ticket) {
       <div class="detail-heading">
         <div>
-          <p class="eyebrow">{{ ticket.status }}</p>
+          <p class="eyebrow">{{ statusLabel(ticket.status) }}</p>
           <h2>{{ ticket.title }}</h2>
         </div>
-        <span [class]="'priority-pill ' + ticket.priority.toLowerCase()">{{ ticket.priority }}</span>
+        <div class="detail-actions">
+          <span [class]="'priority-pill ' + ticket.priority.toLowerCase()">{{ ticket.priority }}</span>
+          @if (canUpdateStatus() && nextStatus(); as next) {
+            <button type="button" class="status-action" [disabled]="isUpdatingStatus()" (click)="updateStatus()">
+              {{ isUpdatingStatus() ? 'Updating...' : 'Move to ' + statusLabel(next) }}
+            </button>
+          }
+        </div>
       </div>
+
+      @if (statusMessage()) {
+        <p class="status-message">{{ statusMessage() }}</p>
+      }
 
       <div class="detail-grid">
         <div>
@@ -99,10 +110,17 @@
       <section class="detail-section context-section">
         <p class="section-label">Chat context</p>
         <div class="context-grid">
-          <a class="context-link" [routerLink]="['/']" [queryParams]="{ conversationId: ticket.conversationId }" title="Open this conversation">
-            <span>Conversation</span>
-            <code>{{ ticket.conversationId }}</code>
-          </a>
+          @if (canOpenConversation(ticket)) {
+            <a class="context-link" [routerLink]="['/']" [queryParams]="{ conversationId: ticket.conversationId }" title="Open this conversation">
+              <span>Conversation</span>
+              <code>{{ ticket.conversationId }}</code>
+            </a>
+          } @else {
+            <div class="context-readonly" title="Only the conversation owner can open this chat">
+              <span>Conversation</span>
+              <code>{{ ticket.conversationId }}</code>
+            </div>
+          }
           <div>
             <span>Origin message</span>
             <code>{{ ticket.messageId ?? 'Not linked' }}</code>
@@ -117,4 +135,5 @@
     }
   </section>
 </section>
+
 

@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { PaginatedList, TicketDetail, TicketListFilters, TicketSummary } from './ticket.models';
+import { PaginatedList, TicketDetail, TicketListFilters, TicketSummary, UpdateTicketStatusRequest } from './ticket.models';
 
 @Injectable({ providedIn: 'root' })
 export class TicketService {
@@ -27,5 +27,8 @@ export class TicketService {
 
   getTicket(ticketId: string): Observable<TicketDetail> {
     return this.http.get<TicketDetail>(`${this.baseUrl}/${ticketId}`);
+  }
+  updateStatus(ticketId: string, request: UpdateTicketStatusRequest): Observable<TicketDetail> {
+    return this.http.patch<TicketDetail>(`${this.baseUrl}/${ticketId}/status`, request);
   }
 }
