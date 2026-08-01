@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, ElementRef, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ChatService } from '../data-access/chat.service';
 import { Conversation, Message } from '../data-access/chat.models';
@@ -16,6 +17,7 @@ export class ChatPageComponent implements OnInit {
 
   private readonly chatService = inject(ChatService);
   private readonly formBuilder = inject(FormBuilder);
+  private readonly route = inject(ActivatedRoute);
 
   readonly conversations = signal<Conversation[]>([]);
   readonly activeConversation = signal<Conversation | null>(null);
@@ -24,6 +26,8 @@ export class ChatPageComponent implements OnInit {
   readonly isLoadingMessages = signal(false);
   readonly isSending = signal(false);
   readonly isCreatingTicket = signal(false);
+  readonly isCreatingConversation = signal(false);
+  readonly isCreatingNewConversation = signal(false);
   readonly conversationHasTicket = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly statusMessage = signal<string | null>(null);
@@ -31,6 +35,10 @@ export class ChatPageComponent implements OnInit {
   readonly hasMessages = computed(() => this.messages().length > 0);
   readonly latestUserMessage = computed(() => [...this.messages()].reverse().find((message) => message.sender === 'User') ?? null);
   readonly canCreateTicket = computed(() => Boolean(this.activeConversation() && this.latestUserMessage() && !this.conversationHasTicket()));
+
+  readonly newConversationForm = this.formBuilder.nonNullable.group({
+    title: ['', [Validators.required, Validators.maxLength(120)]],
+  });
 
   readonly messageForm = this.formBuilder.nonNullable.group({
     content: ['', [Validators.required, Validators.maxLength(4000)]],
@@ -49,6 +57,16 @@ export class ChatPageComponent implements OnInit {
     ).subscribe({
       next: (conversations) => {
         this.conversations.set(conversations);
+        const requestedConversationId = this.route.snapshot.queryParamMap.get('conversationId');
+        const requestedConversation = requestedConversationId
+          ? conversations.find((conversation) => conversation.id === requestedConversationId)
+          : null;
+
+        if (requestedConversation && this.activeConversation()?.id !== requestedConversation.id) {
+          this.selectConversation(requestedConversation);
+          return;
+        }
+
         this.syncActiveConversationTicketState(conversations);
         if (!this.activeConversation() && conversations.length > 0) {
           this.selectConversation(conversations[0]);
@@ -58,15 +76,38 @@ export class ChatPageComponent implements OnInit {
     });
   }
 
+  showNewConversationForm(): void {
+    this.errorMessage.set(null);
+    this.statusMessage.set(null);
+    this.isCreatingNewConversation.set(true);
+    this.newConversationForm.reset({ title: '' });
+  }
+
+  cancelNewConversation(): void {
+    this.isCreatingNewConversation.set(false);
+    this.newConversationForm.reset({ title: '' });
+  }
+
   startConversation(): void {
     this.errorMessage.set(null);
     this.statusMessage.set(null);
-    this.chatService.startConversation({ title: null }).subscribe({
+
+    if (this.newConversationForm.invalid || this.isCreatingConversation()) {
+      this.newConversationForm.markAllAsTouched();
+      return;
+    }
+
+    this.isCreatingConversation.set(true);
+    this.chatService.startConversation({ title: this.newConversationForm.getRawValue().title }).pipe(
+      finalize(() => this.isCreatingConversation.set(false)),
+    ).subscribe({
       next: (conversation) => {
         this.conversations.update((current) => [conversation, ...current]);
         this.activeConversation.set(conversation);
         this.messages.set([]);
         this.conversationHasTicket.set(conversation.hasTicket);
+        this.isCreatingNewConversation.set(false);
+        this.newConversationForm.reset({ title: '' });
       },
       error: () => this.errorMessage.set('Could not start a conversation.'),
     });
@@ -99,7 +140,8 @@ export class ChatPageComponent implements OnInit {
 
   createTicketForConversation(): void {
     const message = this.latestUserMessage();
-    if (!message || this.isCreatingTicket() || this.conversationHasTicket()) {
+    const conversation = this.activeConversation();
+    if (!message || !conversation || this.isCreatingTicket() || this.conversationHasTicket()) {
       return;
     }
 
@@ -108,7 +150,7 @@ export class ChatPageComponent implements OnInit {
     this.isCreatingTicket.set(true);
 
     this.chatService.createTicketFromMessage(message.conversationId, message.id, {
-      title: this.buildConversationTitle(message.content),
+      title: conversation.title,
       description: message.content,
       priority: 'Medium',
     }).pipe(
@@ -226,3 +268,7 @@ export class ChatPageComponent implements OnInit {
     });
   }
 }
+
+
+
+

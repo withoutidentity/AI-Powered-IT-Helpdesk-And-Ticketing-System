@@ -1,0 +1,120 @@
+<section class="tickets-page">
+  <aside class="ticket-list-panel" aria-label="Tickets">
+    <div class="panel-heading">
+      <div>
+        <p class="eyebrow">Ticket queue</p>
+        <h2>Tickets</h2>
+      </div>
+      <span class="count">{{ totalCount() }}</span>
+    </div>
+
+    <form [formGroup]="filterForm" (ngSubmit)="applyFilters()" class="filters">
+      <label>
+        <span>Status</span>
+        <select formControlName="status">
+          <option value="">All</option>
+          <option value="Open">Open</option>
+          <option value="InProgress">In progress</option>
+          <option value="Resolved">Resolved</option>
+          <option value="Closed">Closed</option>
+        </select>
+      </label>
+
+      <label>
+        <span>Priority</span>
+        <select formControlName="priority">
+          <option value="">All</option>
+          <option value="Low">Low</option>
+          <option value="Medium">Medium</option>
+          <option value="High">High</option>
+        </select>
+      </label>
+
+      <div class="filter-actions">
+        <button type="submit">Apply</button>
+        <button type="button" class="secondary" (click)="clearFilters()">Clear</button>
+      </div>
+    </form>
+
+    @if (errorMessage()) {
+      <p class="error-message">{{ errorMessage() }}</p>
+    }
+
+    @if (isLoadingTickets()) {
+      <p class="muted">Loading tickets...</p>
+    } @else if (!hasTickets()) {
+      <p class="muted">No tickets match the current filters.</p>
+    } @else {
+      <div class="ticket-items">
+        @for (ticket of tickets(); track ticket.id) {
+          <button type="button" class="ticket-item" [class.active]="isSelected(ticket)" (click)="selectTicket(ticket)">
+            <span class="ticket-title">{{ ticket.title }}</span>
+            <span class="ticket-meta">
+              <strong [class]="'priority ' + ticket.priority.toLowerCase()">{{ ticket.priority }}</strong>
+              <span>{{ ticket.status }}</span>
+            </span>
+            <time>{{ ticket.createdAt | date: 'short' }}</time>
+          </button>
+        }
+      </div>
+    }
+  </aside>
+
+  <section class="ticket-detail-panel" aria-label="Ticket detail">
+    @if (isLoadingDetail()) {
+      <p class="muted detail-muted">Loading ticket detail...</p>
+    } @else if (selectedTicket(); as ticket) {
+      <div class="detail-heading">
+        <div>
+          <p class="eyebrow">{{ ticket.status }}</p>
+          <h2>{{ ticket.title }}</h2>
+        </div>
+        <span [class]="'priority-pill ' + ticket.priority.toLowerCase()">{{ ticket.priority }}</span>
+      </div>
+
+      <div class="detail-grid">
+        <div>
+          <span>Created</span>
+          <strong>{{ ticket.createdAt | date: 'medium' }}</strong>
+        </div>
+        <div>
+          <span>Updated</span>
+          <strong>{{ ticket.updatedAt | date: 'medium' }}</strong>
+        </div>
+        <div>
+          <span>Created by</span>
+          <strong>{{ ticket.createdBy.username }}</strong>
+        </div>
+        <div>
+          <span>Assigned to</span>
+          <strong>{{ ticket.assignedTo?.username ?? 'Unassigned' }}</strong>
+        </div>
+      </div>
+
+      <section class="detail-section">
+        <p class="section-label">Description</p>
+        <p>{{ ticket.description }}</p>
+      </section>
+
+      <section class="detail-section context-section">
+        <p class="section-label">Chat context</p>
+        <div class="context-grid">
+          <a class="context-link" [routerLink]="['/']" [queryParams]="{ conversationId: ticket.conversationId }" title="Open this conversation">
+            <span>Conversation</span>
+            <code>{{ ticket.conversationId }}</code>
+          </a>
+          <div>
+            <span>Origin message</span>
+            <code>{{ ticket.messageId ?? 'Not linked' }}</code>
+          </div>
+        </div>
+      </section>
+    } @else {
+      <div class="empty-detail">
+        <h2>Select a ticket</h2>
+        <p>Ticket details and chat context will appear here.</p>
+      </div>
+    }
+  </section>
+</section>
+

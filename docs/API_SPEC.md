@@ -126,7 +126,7 @@ self-contained demo/dev flow.
 > **Frontend chat implementation note:** the Angular Chat route currently consumes these no-AI JSON endpoints directly. Streaming and RAG source citations are future AI/RAG slice behavior.
 
 ### `POST /chat/conversations`
-Starts a new conversation for the authenticated user.
+Starts a new conversation for the authenticated user. The frontend prompts for a conversation title before calling this endpoint from the `New` conversation action.
 
 **Auth required:** Yes (`Employee`, `ITAgent`, `ITAdmin`)
 
@@ -334,7 +334,7 @@ Removes the document and its chunks.
 ## 4. Tickets
 
 ### `GET /tickets`
-Lists tickets visible to the authenticated user.
+Lists tickets visible to the authenticated user. The Angular Tickets page consumes this endpoint for the ticket list and status/priority filters.
 
 **Auth required:** Yes - `Employee` sees tickets they created, `ITAgent` sees tickets assigned to them plus unassigned queue tickets, `ITAdmin` sees all tickets.
 
@@ -374,7 +374,7 @@ Lists tickets visible to the authenticated user.
 ---
 
 ### `GET /tickets/{ticketId}`
-Returns one ticket if it is visible to the authenticated user.
+Returns one ticket if it is visible to the authenticated user. The Angular Tickets page uses this detail response to show ticket metadata plus basic chat context from `conversationId` and `messageId`.
 
 **Auth required:** Yes - owner `Employee`, assigned/unassigned-queue `ITAgent`, or `ITAdmin`.
 
@@ -467,6 +467,7 @@ Returns one ticket if it is visible to the authenticated user.
 **Auth required:** No
 **Response `200 OK` / `503 Service Unavailable`** — checks DB connectivity and (optionally,
 non-blocking) Groq API reachability.
+
 
 
 

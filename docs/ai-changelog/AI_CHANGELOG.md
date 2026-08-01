@@ -12,6 +12,77 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Link ticket detail back to chat conversation
+
+**Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The ticket detail Conversation context now renders as a router link to the Chat page with `conversationId` in the query string. The Chat page reads that query param after loading conversations and selects the matching conversation automatically.
+
+**Why this approach:** Query params keep the existing Chat route simple while still making ticket-to-conversation navigation explicit and shareable. It avoids adding a new route shape before conversation detail routing is needed elsewhere.
+
+**Alternatives considered:** Adding `/chat/conversations/:id` was deferred because the app currently uses the root Chat workspace route and only needs deep selection behavior for now.
+
+**Follow-ups / risks:** If Chat later gets a dedicated conversation route, this link should move from query params to route params.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Fix chat ticket title and new conversation form layout
+
+**Prompt/task summary:** Make tickets created from chat use the conversation title, and fix the New conversation form UI that expanded incorrectly in the conversation sidebar.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The chat-to-ticket handoff now sends the active conversation title as the ticket title instead of deriving it from the latest message. The conversation sidebar layout now uses flex column sizing so the New conversation form stays compact and the conversation list is the only section that grows and scrolls.
+
+**Why this approach:** The conversation title is the user-defined issue name, so using it for the ticket title keeps chat and ticket records aligned. Flex column sizing is more robust than a fixed two-row grid when optional panels such as the creation form appear conditionally.
+
+**Alternatives considered:** Keeping message-derived ticket titles was rejected because it can diverge from the user's explicit conversation name. Adding more grid rows was rejected because future conditional sidebar controls would recreate the same layout fragility.
+
+**Follow-ups / risks:** Ticket details still show basic chat context only; richer context can be added when the backend exposes conversation title/message snippets directly.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend tickets page and named conversation creation
+
+**Prompt/task summary:** Continue after backend ticket list/detail APIs by adding the frontend Tickets page, and change Chat `New` conversation creation so the user can choose a conversation name.
+
+**Files changed:**
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `/tickets` placeholder route with a real Tickets page that lists tickets, supports status/priority filters, opens detail in the same workspace, and displays title/status/priority/created metadata plus basic chat context via conversation/message IDs. The Chat page `New` action now opens a small title form before creating the conversation.
+
+**Why this approach:** A split list/detail view matches the existing support-workspace layout and keeps repeated ticket triage efficient. For chat context, the frontend displays the IDs currently available from the backend detail contract instead of inventing another backend call in this slice.
+
+**Alternatives considered:** A separate `/tickets/:id` page was deferred because the current app shell benefits from selecting tickets without route churn. Showing full originating message content was deferred until the backend exposes richer ticket context or a dedicated conversation summary endpoint.
+
+**Follow-ups / risks:** Frontend status updates/comments are still future slices. Ticket detail can become richer once backend returns the originating message snippet or conversation title.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Add backend ticket list and detail APIs
 
 **Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
@@ -221,6 +292,77 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Link ticket detail back to chat conversation
+
+**Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The ticket detail Conversation context now renders as a router link to the Chat page with `conversationId` in the query string. The Chat page reads that query param after loading conversations and selects the matching conversation automatically.
+
+**Why this approach:** Query params keep the existing Chat route simple while still making ticket-to-conversation navigation explicit and shareable. It avoids adding a new route shape before conversation detail routing is needed elsewhere.
+
+**Alternatives considered:** Adding `/chat/conversations/:id` was deferred because the app currently uses the root Chat workspace route and only needs deep selection behavior for now.
+
+**Follow-ups / risks:** If Chat later gets a dedicated conversation route, this link should move from query params to route params.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Fix chat ticket title and new conversation form layout
+
+**Prompt/task summary:** Make tickets created from chat use the conversation title, and fix the New conversation form UI that expanded incorrectly in the conversation sidebar.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The chat-to-ticket handoff now sends the active conversation title as the ticket title instead of deriving it from the latest message. The conversation sidebar layout now uses flex column sizing so the New conversation form stays compact and the conversation list is the only section that grows and scrolls.
+
+**Why this approach:** The conversation title is the user-defined issue name, so using it for the ticket title keeps chat and ticket records aligned. Flex column sizing is more robust than a fixed two-row grid when optional panels such as the creation form appear conditionally.
+
+**Alternatives considered:** Keeping message-derived ticket titles was rejected because it can diverge from the user's explicit conversation name. Adding more grid rows was rejected because future conditional sidebar controls would recreate the same layout fragility.
+
+**Follow-ups / risks:** Ticket details still show basic chat context only; richer context can be added when the backend exposes conversation title/message snippets directly.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend tickets page and named conversation creation
+
+**Prompt/task summary:** Continue after backend ticket list/detail APIs by adding the frontend Tickets page, and change Chat `New` conversation creation so the user can choose a conversation name.
+
+**Files changed:**
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `/tickets` placeholder route with a real Tickets page that lists tickets, supports status/priority filters, opens detail in the same workspace, and displays title/status/priority/created metadata plus basic chat context via conversation/message IDs. The Chat page `New` action now opens a small title form before creating the conversation.
+
+**Why this approach:** A split list/detail view matches the existing support-workspace layout and keeps repeated ticket triage efficient. For chat context, the frontend displays the IDs currently available from the backend detail contract instead of inventing another backend call in this slice.
+
+**Alternatives considered:** A separate `/tickets/:id` page was deferred because the current app shell benefits from selecting tickets without route churn. Showing full originating message content was deferred until the backend exposes richer ticket context or a dedicated conversation summary endpoint.
+
+**Follow-ups / risks:** Frontend status updates/comments are still future slices. Ticket detail can become richer once backend returns the originating message snippet or conversation title.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Add backend ticket list and detail APIs
 
 **Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
@@ -296,6 +438,77 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Link ticket detail back to chat conversation
+
+**Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The ticket detail Conversation context now renders as a router link to the Chat page with `conversationId` in the query string. The Chat page reads that query param after loading conversations and selects the matching conversation automatically.
+
+**Why this approach:** Query params keep the existing Chat route simple while still making ticket-to-conversation navigation explicit and shareable. It avoids adding a new route shape before conversation detail routing is needed elsewhere.
+
+**Alternatives considered:** Adding `/chat/conversations/:id` was deferred because the app currently uses the root Chat workspace route and only needs deep selection behavior for now.
+
+**Follow-ups / risks:** If Chat later gets a dedicated conversation route, this link should move from query params to route params.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Fix chat ticket title and new conversation form layout
+
+**Prompt/task summary:** Make tickets created from chat use the conversation title, and fix the New conversation form UI that expanded incorrectly in the conversation sidebar.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The chat-to-ticket handoff now sends the active conversation title as the ticket title instead of deriving it from the latest message. The conversation sidebar layout now uses flex column sizing so the New conversation form stays compact and the conversation list is the only section that grows and scrolls.
+
+**Why this approach:** The conversation title is the user-defined issue name, so using it for the ticket title keeps chat and ticket records aligned. Flex column sizing is more robust than a fixed two-row grid when optional panels such as the creation form appear conditionally.
+
+**Alternatives considered:** Keeping message-derived ticket titles was rejected because it can diverge from the user's explicit conversation name. Adding more grid rows was rejected because future conditional sidebar controls would recreate the same layout fragility.
+
+**Follow-ups / risks:** Ticket details still show basic chat context only; richer context can be added when the backend exposes conversation title/message snippets directly.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend tickets page and named conversation creation
+
+**Prompt/task summary:** Continue after backend ticket list/detail APIs by adding the frontend Tickets page, and change Chat `New` conversation creation so the user can choose a conversation name.
+
+**Files changed:**
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `/tickets` placeholder route with a real Tickets page that lists tickets, supports status/priority filters, opens detail in the same workspace, and displays title/status/priority/created metadata plus basic chat context via conversation/message IDs. The Chat page `New` action now opens a small title form before creating the conversation.
+
+**Why this approach:** A split list/detail view matches the existing support-workspace layout and keeps repeated ticket triage efficient. For chat context, the frontend displays the IDs currently available from the backend detail contract instead of inventing another backend call in this slice.
+
+**Alternatives considered:** A separate `/tickets/:id` page was deferred because the current app shell benefits from selecting tickets without route churn. Showing full originating message content was deferred until the backend exposes richer ticket context or a dedicated conversation summary endpoint.
+
+**Follow-ups / risks:** Frontend status updates/comments are still future slices. Ticket detail can become richer once backend returns the originating message snippet or conversation title.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Add backend ticket list and detail APIs
 
 **Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
@@ -371,6 +584,77 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Link ticket detail back to chat conversation
+
+**Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The ticket detail Conversation context now renders as a router link to the Chat page with `conversationId` in the query string. The Chat page reads that query param after loading conversations and selects the matching conversation automatically.
+
+**Why this approach:** Query params keep the existing Chat route simple while still making ticket-to-conversation navigation explicit and shareable. It avoids adding a new route shape before conversation detail routing is needed elsewhere.
+
+**Alternatives considered:** Adding `/chat/conversations/:id` was deferred because the app currently uses the root Chat workspace route and only needs deep selection behavior for now.
+
+**Follow-ups / risks:** If Chat later gets a dedicated conversation route, this link should move from query params to route params.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Fix chat ticket title and new conversation form layout
+
+**Prompt/task summary:** Make tickets created from chat use the conversation title, and fix the New conversation form UI that expanded incorrectly in the conversation sidebar.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The chat-to-ticket handoff now sends the active conversation title as the ticket title instead of deriving it from the latest message. The conversation sidebar layout now uses flex column sizing so the New conversation form stays compact and the conversation list is the only section that grows and scrolls.
+
+**Why this approach:** The conversation title is the user-defined issue name, so using it for the ticket title keeps chat and ticket records aligned. Flex column sizing is more robust than a fixed two-row grid when optional panels such as the creation form appear conditionally.
+
+**Alternatives considered:** Keeping message-derived ticket titles was rejected because it can diverge from the user's explicit conversation name. Adding more grid rows was rejected because future conditional sidebar controls would recreate the same layout fragility.
+
+**Follow-ups / risks:** Ticket details still show basic chat context only; richer context can be added when the backend exposes conversation title/message snippets directly.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend tickets page and named conversation creation
+
+**Prompt/task summary:** Continue after backend ticket list/detail APIs by adding the frontend Tickets page, and change Chat `New` conversation creation so the user can choose a conversation name.
+
+**Files changed:**
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `/tickets` placeholder route with a real Tickets page that lists tickets, supports status/priority filters, opens detail in the same workspace, and displays title/status/priority/created metadata plus basic chat context via conversation/message IDs. The Chat page `New` action now opens a small title form before creating the conversation.
+
+**Why this approach:** A split list/detail view matches the existing support-workspace layout and keeps repeated ticket triage efficient. For chat context, the frontend displays the IDs currently available from the backend detail contract instead of inventing another backend call in this slice.
+
+**Alternatives considered:** A separate `/tickets/:id` page was deferred because the current app shell benefits from selecting tickets without route churn. Showing full originating message content was deferred until the backend exposes richer ticket context or a dedicated conversation summary endpoint.
+
+**Follow-ups / risks:** Frontend status updates/comments are still future slices. Ticket detail can become richer once backend returns the originating message snippet or conversation title.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Add backend ticket list and detail APIs
 
 **Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
@@ -449,6 +733,77 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Link ticket detail back to chat conversation
+
+**Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The ticket detail Conversation context now renders as a router link to the Chat page with `conversationId` in the query string. The Chat page reads that query param after loading conversations and selects the matching conversation automatically.
+
+**Why this approach:** Query params keep the existing Chat route simple while still making ticket-to-conversation navigation explicit and shareable. It avoids adding a new route shape before conversation detail routing is needed elsewhere.
+
+**Alternatives considered:** Adding `/chat/conversations/:id` was deferred because the app currently uses the root Chat workspace route and only needs deep selection behavior for now.
+
+**Follow-ups / risks:** If Chat later gets a dedicated conversation route, this link should move from query params to route params.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Fix chat ticket title and new conversation form layout
+
+**Prompt/task summary:** Make tickets created from chat use the conversation title, and fix the New conversation form UI that expanded incorrectly in the conversation sidebar.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The chat-to-ticket handoff now sends the active conversation title as the ticket title instead of deriving it from the latest message. The conversation sidebar layout now uses flex column sizing so the New conversation form stays compact and the conversation list is the only section that grows and scrolls.
+
+**Why this approach:** The conversation title is the user-defined issue name, so using it for the ticket title keeps chat and ticket records aligned. Flex column sizing is more robust than a fixed two-row grid when optional panels such as the creation form appear conditionally.
+
+**Alternatives considered:** Keeping message-derived ticket titles was rejected because it can diverge from the user's explicit conversation name. Adding more grid rows was rejected because future conditional sidebar controls would recreate the same layout fragility.
+
+**Follow-ups / risks:** Ticket details still show basic chat context only; richer context can be added when the backend exposes conversation title/message snippets directly.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend tickets page and named conversation creation
+
+**Prompt/task summary:** Continue after backend ticket list/detail APIs by adding the frontend Tickets page, and change Chat `New` conversation creation so the user can choose a conversation name.
+
+**Files changed:**
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `/tickets` placeholder route with a real Tickets page that lists tickets, supports status/priority filters, opens detail in the same workspace, and displays title/status/priority/created metadata plus basic chat context via conversation/message IDs. The Chat page `New` action now opens a small title form before creating the conversation.
+
+**Why this approach:** A split list/detail view matches the existing support-workspace layout and keeps repeated ticket triage efficient. For chat context, the frontend displays the IDs currently available from the backend detail contract instead of inventing another backend call in this slice.
+
+**Alternatives considered:** A separate `/tickets/:id` page was deferred because the current app shell benefits from selecting tickets without route churn. Showing full originating message content was deferred until the backend exposes richer ticket context or a dedicated conversation summary endpoint.
+
+**Follow-ups / risks:** Frontend status updates/comments are still future slices. Ticket detail can become richer once backend returns the originating message snippet or conversation title.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Add backend ticket list and detail APIs
 
 **Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
@@ -530,6 +885,77 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Link ticket detail back to chat conversation
+
+**Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The ticket detail Conversation context now renders as a router link to the Chat page with `conversationId` in the query string. The Chat page reads that query param after loading conversations and selects the matching conversation automatically.
+
+**Why this approach:** Query params keep the existing Chat route simple while still making ticket-to-conversation navigation explicit and shareable. It avoids adding a new route shape before conversation detail routing is needed elsewhere.
+
+**Alternatives considered:** Adding `/chat/conversations/:id` was deferred because the app currently uses the root Chat workspace route and only needs deep selection behavior for now.
+
+**Follow-ups / risks:** If Chat later gets a dedicated conversation route, this link should move from query params to route params.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Fix chat ticket title and new conversation form layout
+
+**Prompt/task summary:** Make tickets created from chat use the conversation title, and fix the New conversation form UI that expanded incorrectly in the conversation sidebar.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The chat-to-ticket handoff now sends the active conversation title as the ticket title instead of deriving it from the latest message. The conversation sidebar layout now uses flex column sizing so the New conversation form stays compact and the conversation list is the only section that grows and scrolls.
+
+**Why this approach:** The conversation title is the user-defined issue name, so using it for the ticket title keeps chat and ticket records aligned. Flex column sizing is more robust than a fixed two-row grid when optional panels such as the creation form appear conditionally.
+
+**Alternatives considered:** Keeping message-derived ticket titles was rejected because it can diverge from the user's explicit conversation name. Adding more grid rows was rejected because future conditional sidebar controls would recreate the same layout fragility.
+
+**Follow-ups / risks:** Ticket details still show basic chat context only; richer context can be added when the backend exposes conversation title/message snippets directly.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend tickets page and named conversation creation
+
+**Prompt/task summary:** Continue after backend ticket list/detail APIs by adding the frontend Tickets page, and change Chat `New` conversation creation so the user can choose a conversation name.
+
+**Files changed:**
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `/tickets` placeholder route with a real Tickets page that lists tickets, supports status/priority filters, opens detail in the same workspace, and displays title/status/priority/created metadata plus basic chat context via conversation/message IDs. The Chat page `New` action now opens a small title form before creating the conversation.
+
+**Why this approach:** A split list/detail view matches the existing support-workspace layout and keeps repeated ticket triage efficient. For chat context, the frontend displays the IDs currently available from the backend detail contract instead of inventing another backend call in this slice.
+
+**Alternatives considered:** A separate `/tickets/:id` page was deferred because the current app shell benefits from selecting tickets without route churn. Showing full originating message content was deferred until the backend exposes richer ticket context or a dedicated conversation summary endpoint.
+
+**Follow-ups / risks:** Frontend status updates/comments are still future slices. Ticket detail can become richer once backend returns the originating message snippet or conversation title.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Add backend ticket list and detail APIs
 
 **Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
@@ -605,6 +1031,77 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Link ticket detail back to chat conversation
+
+**Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The ticket detail Conversation context now renders as a router link to the Chat page with `conversationId` in the query string. The Chat page reads that query param after loading conversations and selects the matching conversation automatically.
+
+**Why this approach:** Query params keep the existing Chat route simple while still making ticket-to-conversation navigation explicit and shareable. It avoids adding a new route shape before conversation detail routing is needed elsewhere.
+
+**Alternatives considered:** Adding `/chat/conversations/:id` was deferred because the app currently uses the root Chat workspace route and only needs deep selection behavior for now.
+
+**Follow-ups / risks:** If Chat later gets a dedicated conversation route, this link should move from query params to route params.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Fix chat ticket title and new conversation form layout
+
+**Prompt/task summary:** Make tickets created from chat use the conversation title, and fix the New conversation form UI that expanded incorrectly in the conversation sidebar.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The chat-to-ticket handoff now sends the active conversation title as the ticket title instead of deriving it from the latest message. The conversation sidebar layout now uses flex column sizing so the New conversation form stays compact and the conversation list is the only section that grows and scrolls.
+
+**Why this approach:** The conversation title is the user-defined issue name, so using it for the ticket title keeps chat and ticket records aligned. Flex column sizing is more robust than a fixed two-row grid when optional panels such as the creation form appear conditionally.
+
+**Alternatives considered:** Keeping message-derived ticket titles was rejected because it can diverge from the user's explicit conversation name. Adding more grid rows was rejected because future conditional sidebar controls would recreate the same layout fragility.
+
+**Follow-ups / risks:** Ticket details still show basic chat context only; richer context can be added when the backend exposes conversation title/message snippets directly.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend tickets page and named conversation creation
+
+**Prompt/task summary:** Continue after backend ticket list/detail APIs by adding the frontend Tickets page, and change Chat `New` conversation creation so the user can choose a conversation name.
+
+**Files changed:**
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `/tickets` placeholder route with a real Tickets page that lists tickets, supports status/priority filters, opens detail in the same workspace, and displays title/status/priority/created metadata plus basic chat context via conversation/message IDs. The Chat page `New` action now opens a small title form before creating the conversation.
+
+**Why this approach:** A split list/detail view matches the existing support-workspace layout and keeps repeated ticket triage efficient. For chat context, the frontend displays the IDs currently available from the backend detail contract instead of inventing another backend call in this slice.
+
+**Alternatives considered:** A separate `/tickets/:id` page was deferred because the current app shell benefits from selecting tickets without route churn. Showing full originating message content was deferred until the backend exposes richer ticket context or a dedicated conversation summary endpoint.
+
+**Follow-ups / risks:** Frontend status updates/comments are still future slices. Ticket detail can become richer once backend returns the originating message snippet or conversation title.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Add backend ticket list and detail APIs
 
 **Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
@@ -696,6 +1193,77 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Link ticket detail back to chat conversation
+
+**Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The ticket detail Conversation context now renders as a router link to the Chat page with `conversationId` in the query string. The Chat page reads that query param after loading conversations and selects the matching conversation automatically.
+
+**Why this approach:** Query params keep the existing Chat route simple while still making ticket-to-conversation navigation explicit and shareable. It avoids adding a new route shape before conversation detail routing is needed elsewhere.
+
+**Alternatives considered:** Adding `/chat/conversations/:id` was deferred because the app currently uses the root Chat workspace route and only needs deep selection behavior for now.
+
+**Follow-ups / risks:** If Chat later gets a dedicated conversation route, this link should move from query params to route params.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Fix chat ticket title and new conversation form layout
+
+**Prompt/task summary:** Make tickets created from chat use the conversation title, and fix the New conversation form UI that expanded incorrectly in the conversation sidebar.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The chat-to-ticket handoff now sends the active conversation title as the ticket title instead of deriving it from the latest message. The conversation sidebar layout now uses flex column sizing so the New conversation form stays compact and the conversation list is the only section that grows and scrolls.
+
+**Why this approach:** The conversation title is the user-defined issue name, so using it for the ticket title keeps chat and ticket records aligned. Flex column sizing is more robust than a fixed two-row grid when optional panels such as the creation form appear conditionally.
+
+**Alternatives considered:** Keeping message-derived ticket titles was rejected because it can diverge from the user's explicit conversation name. Adding more grid rows was rejected because future conditional sidebar controls would recreate the same layout fragility.
+
+**Follow-ups / risks:** Ticket details still show basic chat context only; richer context can be added when the backend exposes conversation title/message snippets directly.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend tickets page and named conversation creation
+
+**Prompt/task summary:** Continue after backend ticket list/detail APIs by adding the frontend Tickets page, and change Chat `New` conversation creation so the user can choose a conversation name.
+
+**Files changed:**
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `/tickets` placeholder route with a real Tickets page that lists tickets, supports status/priority filters, opens detail in the same workspace, and displays title/status/priority/created metadata plus basic chat context via conversation/message IDs. The Chat page `New` action now opens a small title form before creating the conversation.
+
+**Why this approach:** A split list/detail view matches the existing support-workspace layout and keeps repeated ticket triage efficient. For chat context, the frontend displays the IDs currently available from the backend detail contract instead of inventing another backend call in this slice.
+
+**Alternatives considered:** A separate `/tickets/:id` page was deferred because the current app shell benefits from selecting tickets without route churn. Showing full originating message content was deferred until the backend exposes richer ticket context or a dedicated conversation summary endpoint.
+
+**Follow-ups / risks:** Frontend status updates/comments are still future slices. Ticket detail can become richer once backend returns the originating message snippet or conversation title.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Add backend ticket list and detail APIs
 
 **Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
@@ -787,6 +1355,77 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Link ticket detail back to chat conversation
+
+**Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The ticket detail Conversation context now renders as a router link to the Chat page with `conversationId` in the query string. The Chat page reads that query param after loading conversations and selects the matching conversation automatically.
+
+**Why this approach:** Query params keep the existing Chat route simple while still making ticket-to-conversation navigation explicit and shareable. It avoids adding a new route shape before conversation detail routing is needed elsewhere.
+
+**Alternatives considered:** Adding `/chat/conversations/:id` was deferred because the app currently uses the root Chat workspace route and only needs deep selection behavior for now.
+
+**Follow-ups / risks:** If Chat later gets a dedicated conversation route, this link should move from query params to route params.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Fix chat ticket title and new conversation form layout
+
+**Prompt/task summary:** Make tickets created from chat use the conversation title, and fix the New conversation form UI that expanded incorrectly in the conversation sidebar.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The chat-to-ticket handoff now sends the active conversation title as the ticket title instead of deriving it from the latest message. The conversation sidebar layout now uses flex column sizing so the New conversation form stays compact and the conversation list is the only section that grows and scrolls.
+
+**Why this approach:** The conversation title is the user-defined issue name, so using it for the ticket title keeps chat and ticket records aligned. Flex column sizing is more robust than a fixed two-row grid when optional panels such as the creation form appear conditionally.
+
+**Alternatives considered:** Keeping message-derived ticket titles was rejected because it can diverge from the user's explicit conversation name. Adding more grid rows was rejected because future conditional sidebar controls would recreate the same layout fragility.
+
+**Follow-ups / risks:** Ticket details still show basic chat context only; richer context can be added when the backend exposes conversation title/message snippets directly.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend tickets page and named conversation creation
+
+**Prompt/task summary:** Continue after backend ticket list/detail APIs by adding the frontend Tickets page, and change Chat `New` conversation creation so the user can choose a conversation name.
+
+**Files changed:**
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `/tickets` placeholder route with a real Tickets page that lists tickets, supports status/priority filters, opens detail in the same workspace, and displays title/status/priority/created metadata plus basic chat context via conversation/message IDs. The Chat page `New` action now opens a small title form before creating the conversation.
+
+**Why this approach:** A split list/detail view matches the existing support-workspace layout and keeps repeated ticket triage efficient. For chat context, the frontend displays the IDs currently available from the backend detail contract instead of inventing another backend call in this slice.
+
+**Alternatives considered:** A separate `/tickets/:id` page was deferred because the current app shell benefits from selecting tickets without route churn. Showing full originating message content was deferred until the backend exposes richer ticket context or a dedicated conversation summary endpoint.
+
+**Follow-ups / risks:** Frontend status updates/comments are still future slices. Ticket detail can become richer once backend returns the originating message snippet or conversation title.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Add backend ticket list and detail APIs
 
 **Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
@@ -862,6 +1501,77 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Link ticket detail back to chat conversation
+
+**Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The ticket detail Conversation context now renders as a router link to the Chat page with `conversationId` in the query string. The Chat page reads that query param after loading conversations and selects the matching conversation automatically.
+
+**Why this approach:** Query params keep the existing Chat route simple while still making ticket-to-conversation navigation explicit and shareable. It avoids adding a new route shape before conversation detail routing is needed elsewhere.
+
+**Alternatives considered:** Adding `/chat/conversations/:id` was deferred because the app currently uses the root Chat workspace route and only needs deep selection behavior for now.
+
+**Follow-ups / risks:** If Chat later gets a dedicated conversation route, this link should move from query params to route params.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Fix chat ticket title and new conversation form layout
+
+**Prompt/task summary:** Make tickets created from chat use the conversation title, and fix the New conversation form UI that expanded incorrectly in the conversation sidebar.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The chat-to-ticket handoff now sends the active conversation title as the ticket title instead of deriving it from the latest message. The conversation sidebar layout now uses flex column sizing so the New conversation form stays compact and the conversation list is the only section that grows and scrolls.
+
+**Why this approach:** The conversation title is the user-defined issue name, so using it for the ticket title keeps chat and ticket records aligned. Flex column sizing is more robust than a fixed two-row grid when optional panels such as the creation form appear conditionally.
+
+**Alternatives considered:** Keeping message-derived ticket titles was rejected because it can diverge from the user's explicit conversation name. Adding more grid rows was rejected because future conditional sidebar controls would recreate the same layout fragility.
+
+**Follow-ups / risks:** Ticket details still show basic chat context only; richer context can be added when the backend exposes conversation title/message snippets directly.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend tickets page and named conversation creation
+
+**Prompt/task summary:** Continue after backend ticket list/detail APIs by adding the frontend Tickets page, and change Chat `New` conversation creation so the user can choose a conversation name.
+
+**Files changed:**
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `/tickets` placeholder route with a real Tickets page that lists tickets, supports status/priority filters, opens detail in the same workspace, and displays title/status/priority/created metadata plus basic chat context via conversation/message IDs. The Chat page `New` action now opens a small title form before creating the conversation.
+
+**Why this approach:** A split list/detail view matches the existing support-workspace layout and keeps repeated ticket triage efficient. For chat context, the frontend displays the IDs currently available from the backend detail contract instead of inventing another backend call in this slice.
+
+**Alternatives considered:** A separate `/tickets/:id` page was deferred because the current app shell benefits from selecting tickets without route churn. Showing full originating message content was deferred until the backend exposes richer ticket context or a dedicated conversation summary endpoint.
+
+**Follow-ups / risks:** Frontend status updates/comments are still future slices. Ticket detail can become richer once backend returns the originating message snippet or conversation title.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Add backend ticket list and detail APIs
 
 **Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
@@ -937,6 +1647,77 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Link ticket detail back to chat conversation
+
+**Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The ticket detail Conversation context now renders as a router link to the Chat page with `conversationId` in the query string. The Chat page reads that query param after loading conversations and selects the matching conversation automatically.
+
+**Why this approach:** Query params keep the existing Chat route simple while still making ticket-to-conversation navigation explicit and shareable. It avoids adding a new route shape before conversation detail routing is needed elsewhere.
+
+**Alternatives considered:** Adding `/chat/conversations/:id` was deferred because the app currently uses the root Chat workspace route and only needs deep selection behavior for now.
+
+**Follow-ups / risks:** If Chat later gets a dedicated conversation route, this link should move from query params to route params.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Fix chat ticket title and new conversation form layout
+
+**Prompt/task summary:** Make tickets created from chat use the conversation title, and fix the New conversation form UI that expanded incorrectly in the conversation sidebar.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The chat-to-ticket handoff now sends the active conversation title as the ticket title instead of deriving it from the latest message. The conversation sidebar layout now uses flex column sizing so the New conversation form stays compact and the conversation list is the only section that grows and scrolls.
+
+**Why this approach:** The conversation title is the user-defined issue name, so using it for the ticket title keeps chat and ticket records aligned. Flex column sizing is more robust than a fixed two-row grid when optional panels such as the creation form appear conditionally.
+
+**Alternatives considered:** Keeping message-derived ticket titles was rejected because it can diverge from the user's explicit conversation name. Adding more grid rows was rejected because future conditional sidebar controls would recreate the same layout fragility.
+
+**Follow-ups / risks:** Ticket details still show basic chat context only; richer context can be added when the backend exposes conversation title/message snippets directly.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend tickets page and named conversation creation
+
+**Prompt/task summary:** Continue after backend ticket list/detail APIs by adding the frontend Tickets page, and change Chat `New` conversation creation so the user can choose a conversation name.
+
+**Files changed:**
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `/tickets` placeholder route with a real Tickets page that lists tickets, supports status/priority filters, opens detail in the same workspace, and displays title/status/priority/created metadata plus basic chat context via conversation/message IDs. The Chat page `New` action now opens a small title form before creating the conversation.
+
+**Why this approach:** A split list/detail view matches the existing support-workspace layout and keeps repeated ticket triage efficient. For chat context, the frontend displays the IDs currently available from the backend detail contract instead of inventing another backend call in this slice.
+
+**Alternatives considered:** A separate `/tickets/:id` page was deferred because the current app shell benefits from selecting tickets without route churn. Showing full originating message content was deferred until the backend exposes richer ticket context or a dedicated conversation summary endpoint.
+
+**Follow-ups / risks:** Frontend status updates/comments are still future slices. Ticket detail can become richer once backend returns the originating message snippet or conversation title.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Add backend ticket list and detail APIs
 
 **Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
@@ -1017,6 +1798,77 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Link ticket detail back to chat conversation
+
+**Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The ticket detail Conversation context now renders as a router link to the Chat page with `conversationId` in the query string. The Chat page reads that query param after loading conversations and selects the matching conversation automatically.
+
+**Why this approach:** Query params keep the existing Chat route simple while still making ticket-to-conversation navigation explicit and shareable. It avoids adding a new route shape before conversation detail routing is needed elsewhere.
+
+**Alternatives considered:** Adding `/chat/conversations/:id` was deferred because the app currently uses the root Chat workspace route and only needs deep selection behavior for now.
+
+**Follow-ups / risks:** If Chat later gets a dedicated conversation route, this link should move from query params to route params.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Fix chat ticket title and new conversation form layout
+
+**Prompt/task summary:** Make tickets created from chat use the conversation title, and fix the New conversation form UI that expanded incorrectly in the conversation sidebar.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The chat-to-ticket handoff now sends the active conversation title as the ticket title instead of deriving it from the latest message. The conversation sidebar layout now uses flex column sizing so the New conversation form stays compact and the conversation list is the only section that grows and scrolls.
+
+**Why this approach:** The conversation title is the user-defined issue name, so using it for the ticket title keeps chat and ticket records aligned. Flex column sizing is more robust than a fixed two-row grid when optional panels such as the creation form appear conditionally.
+
+**Alternatives considered:** Keeping message-derived ticket titles was rejected because it can diverge from the user's explicit conversation name. Adding more grid rows was rejected because future conditional sidebar controls would recreate the same layout fragility.
+
+**Follow-ups / risks:** Ticket details still show basic chat context only; richer context can be added when the backend exposes conversation title/message snippets directly.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend tickets page and named conversation creation
+
+**Prompt/task summary:** Continue after backend ticket list/detail APIs by adding the frontend Tickets page, and change Chat `New` conversation creation so the user can choose a conversation name.
+
+**Files changed:**
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `/tickets` placeholder route with a real Tickets page that lists tickets, supports status/priority filters, opens detail in the same workspace, and displays title/status/priority/created metadata plus basic chat context via conversation/message IDs. The Chat page `New` action now opens a small title form before creating the conversation.
+
+**Why this approach:** A split list/detail view matches the existing support-workspace layout and keeps repeated ticket triage efficient. For chat context, the frontend displays the IDs currently available from the backend detail contract instead of inventing another backend call in this slice.
+
+**Alternatives considered:** A separate `/tickets/:id` page was deferred because the current app shell benefits from selecting tickets without route churn. Showing full originating message content was deferred until the backend exposes richer ticket context or a dedicated conversation summary endpoint.
+
+**Follow-ups / risks:** Frontend status updates/comments are still future slices. Ticket detail can become richer once backend returns the originating message snippet or conversation title.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Add backend ticket list and detail APIs
 
 **Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
@@ -1100,6 +1952,77 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Link ticket detail back to chat conversation
+
+**Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The ticket detail Conversation context now renders as a router link to the Chat page with `conversationId` in the query string. The Chat page reads that query param after loading conversations and selects the matching conversation automatically.
+
+**Why this approach:** Query params keep the existing Chat route simple while still making ticket-to-conversation navigation explicit and shareable. It avoids adding a new route shape before conversation detail routing is needed elsewhere.
+
+**Alternatives considered:** Adding `/chat/conversations/:id` was deferred because the app currently uses the root Chat workspace route and only needs deep selection behavior for now.
+
+**Follow-ups / risks:** If Chat later gets a dedicated conversation route, this link should move from query params to route params.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Fix chat ticket title and new conversation form layout
+
+**Prompt/task summary:** Make tickets created from chat use the conversation title, and fix the New conversation form UI that expanded incorrectly in the conversation sidebar.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The chat-to-ticket handoff now sends the active conversation title as the ticket title instead of deriving it from the latest message. The conversation sidebar layout now uses flex column sizing so the New conversation form stays compact and the conversation list is the only section that grows and scrolls.
+
+**Why this approach:** The conversation title is the user-defined issue name, so using it for the ticket title keeps chat and ticket records aligned. Flex column sizing is more robust than a fixed two-row grid when optional panels such as the creation form appear conditionally.
+
+**Alternatives considered:** Keeping message-derived ticket titles was rejected because it can diverge from the user's explicit conversation name. Adding more grid rows was rejected because future conditional sidebar controls would recreate the same layout fragility.
+
+**Follow-ups / risks:** Ticket details still show basic chat context only; richer context can be added when the backend exposes conversation title/message snippets directly.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend tickets page and named conversation creation
+
+**Prompt/task summary:** Continue after backend ticket list/detail APIs by adding the frontend Tickets page, and change Chat `New` conversation creation so the user can choose a conversation name.
+
+**Files changed:**
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `/tickets` placeholder route with a real Tickets page that lists tickets, supports status/priority filters, opens detail in the same workspace, and displays title/status/priority/created metadata plus basic chat context via conversation/message IDs. The Chat page `New` action now opens a small title form before creating the conversation.
+
+**Why this approach:** A split list/detail view matches the existing support-workspace layout and keeps repeated ticket triage efficient. For chat context, the frontend displays the IDs currently available from the backend detail contract instead of inventing another backend call in this slice.
+
+**Alternatives considered:** A separate `/tickets/:id` page was deferred because the current app shell benefits from selecting tickets without route churn. Showing full originating message content was deferred until the backend exposes richer ticket context or a dedicated conversation summary endpoint.
+
+**Follow-ups / risks:** Frontend status updates/comments are still future slices. Ticket detail can become richer once backend returns the originating message snippet or conversation title.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Add backend ticket list and detail APIs
 
 **Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
@@ -1193,6 +2116,77 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Link ticket detail back to chat conversation
+
+**Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The ticket detail Conversation context now renders as a router link to the Chat page with `conversationId` in the query string. The Chat page reads that query param after loading conversations and selects the matching conversation automatically.
+
+**Why this approach:** Query params keep the existing Chat route simple while still making ticket-to-conversation navigation explicit and shareable. It avoids adding a new route shape before conversation detail routing is needed elsewhere.
+
+**Alternatives considered:** Adding `/chat/conversations/:id` was deferred because the app currently uses the root Chat workspace route and only needs deep selection behavior for now.
+
+**Follow-ups / risks:** If Chat later gets a dedicated conversation route, this link should move from query params to route params.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Fix chat ticket title and new conversation form layout
+
+**Prompt/task summary:** Make tickets created from chat use the conversation title, and fix the New conversation form UI that expanded incorrectly in the conversation sidebar.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The chat-to-ticket handoff now sends the active conversation title as the ticket title instead of deriving it from the latest message. The conversation sidebar layout now uses flex column sizing so the New conversation form stays compact and the conversation list is the only section that grows and scrolls.
+
+**Why this approach:** The conversation title is the user-defined issue name, so using it for the ticket title keeps chat and ticket records aligned. Flex column sizing is more robust than a fixed two-row grid when optional panels such as the creation form appear conditionally.
+
+**Alternatives considered:** Keeping message-derived ticket titles was rejected because it can diverge from the user's explicit conversation name. Adding more grid rows was rejected because future conditional sidebar controls would recreate the same layout fragility.
+
+**Follow-ups / risks:** Ticket details still show basic chat context only; richer context can be added when the backend exposes conversation title/message snippets directly.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend tickets page and named conversation creation
+
+**Prompt/task summary:** Continue after backend ticket list/detail APIs by adding the frontend Tickets page, and change Chat `New` conversation creation so the user can choose a conversation name.
+
+**Files changed:**
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `/tickets` placeholder route with a real Tickets page that lists tickets, supports status/priority filters, opens detail in the same workspace, and displays title/status/priority/created metadata plus basic chat context via conversation/message IDs. The Chat page `New` action now opens a small title form before creating the conversation.
+
+**Why this approach:** A split list/detail view matches the existing support-workspace layout and keeps repeated ticket triage efficient. For chat context, the frontend displays the IDs currently available from the backend detail contract instead of inventing another backend call in this slice.
+
+**Alternatives considered:** A separate `/tickets/:id` page was deferred because the current app shell benefits from selecting tickets without route churn. Showing full originating message content was deferred until the backend exposes richer ticket context or a dedicated conversation summary endpoint.
+
+**Follow-ups / risks:** Frontend status updates/comments are still future slices. Ticket detail can become richer once backend returns the originating message snippet or conversation title.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Add backend ticket list and detail APIs
 
 **Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
@@ -1274,6 +2268,77 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Link ticket detail back to chat conversation
+
+**Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The ticket detail Conversation context now renders as a router link to the Chat page with `conversationId` in the query string. The Chat page reads that query param after loading conversations and selects the matching conversation automatically.
+
+**Why this approach:** Query params keep the existing Chat route simple while still making ticket-to-conversation navigation explicit and shareable. It avoids adding a new route shape before conversation detail routing is needed elsewhere.
+
+**Alternatives considered:** Adding `/chat/conversations/:id` was deferred because the app currently uses the root Chat workspace route and only needs deep selection behavior for now.
+
+**Follow-ups / risks:** If Chat later gets a dedicated conversation route, this link should move from query params to route params.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Fix chat ticket title and new conversation form layout
+
+**Prompt/task summary:** Make tickets created from chat use the conversation title, and fix the New conversation form UI that expanded incorrectly in the conversation sidebar.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The chat-to-ticket handoff now sends the active conversation title as the ticket title instead of deriving it from the latest message. The conversation sidebar layout now uses flex column sizing so the New conversation form stays compact and the conversation list is the only section that grows and scrolls.
+
+**Why this approach:** The conversation title is the user-defined issue name, so using it for the ticket title keeps chat and ticket records aligned. Flex column sizing is more robust than a fixed two-row grid when optional panels such as the creation form appear conditionally.
+
+**Alternatives considered:** Keeping message-derived ticket titles was rejected because it can diverge from the user's explicit conversation name. Adding more grid rows was rejected because future conditional sidebar controls would recreate the same layout fragility.
+
+**Follow-ups / risks:** Ticket details still show basic chat context only; richer context can be added when the backend exposes conversation title/message snippets directly.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend tickets page and named conversation creation
+
+**Prompt/task summary:** Continue after backend ticket list/detail APIs by adding the frontend Tickets page, and change Chat `New` conversation creation so the user can choose a conversation name.
+
+**Files changed:**
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `/tickets` placeholder route with a real Tickets page that lists tickets, supports status/priority filters, opens detail in the same workspace, and displays title/status/priority/created metadata plus basic chat context via conversation/message IDs. The Chat page `New` action now opens a small title form before creating the conversation.
+
+**Why this approach:** A split list/detail view matches the existing support-workspace layout and keeps repeated ticket triage efficient. For chat context, the frontend displays the IDs currently available from the backend detail contract instead of inventing another backend call in this slice.
+
+**Alternatives considered:** A separate `/tickets/:id` page was deferred because the current app shell benefits from selecting tickets without route churn. Showing full originating message content was deferred until the backend exposes richer ticket context or a dedicated conversation summary endpoint.
+
+**Follow-ups / risks:** Frontend status updates/comments are still future slices. Ticket detail can become richer once backend returns the originating message snippet or conversation title.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Add backend ticket list and detail APIs
 
 **Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
@@ -1374,6 +2439,77 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Link ticket detail back to chat conversation
+
+**Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The ticket detail Conversation context now renders as a router link to the Chat page with `conversationId` in the query string. The Chat page reads that query param after loading conversations and selects the matching conversation automatically.
+
+**Why this approach:** Query params keep the existing Chat route simple while still making ticket-to-conversation navigation explicit and shareable. It avoids adding a new route shape before conversation detail routing is needed elsewhere.
+
+**Alternatives considered:** Adding `/chat/conversations/:id` was deferred because the app currently uses the root Chat workspace route and only needs deep selection behavior for now.
+
+**Follow-ups / risks:** If Chat later gets a dedicated conversation route, this link should move from query params to route params.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Fix chat ticket title and new conversation form layout
+
+**Prompt/task summary:** Make tickets created from chat use the conversation title, and fix the New conversation form UI that expanded incorrectly in the conversation sidebar.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The chat-to-ticket handoff now sends the active conversation title as the ticket title instead of deriving it from the latest message. The conversation sidebar layout now uses flex column sizing so the New conversation form stays compact and the conversation list is the only section that grows and scrolls.
+
+**Why this approach:** The conversation title is the user-defined issue name, so using it for the ticket title keeps chat and ticket records aligned. Flex column sizing is more robust than a fixed two-row grid when optional panels such as the creation form appear conditionally.
+
+**Alternatives considered:** Keeping message-derived ticket titles was rejected because it can diverge from the user's explicit conversation name. Adding more grid rows was rejected because future conditional sidebar controls would recreate the same layout fragility.
+
+**Follow-ups / risks:** Ticket details still show basic chat context only; richer context can be added when the backend exposes conversation title/message snippets directly.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend tickets page and named conversation creation
+
+**Prompt/task summary:** Continue after backend ticket list/detail APIs by adding the frontend Tickets page, and change Chat `New` conversation creation so the user can choose a conversation name.
+
+**Files changed:**
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `/tickets` placeholder route with a real Tickets page that lists tickets, supports status/priority filters, opens detail in the same workspace, and displays title/status/priority/created metadata plus basic chat context via conversation/message IDs. The Chat page `New` action now opens a small title form before creating the conversation.
+
+**Why this approach:** A split list/detail view matches the existing support-workspace layout and keeps repeated ticket triage efficient. For chat context, the frontend displays the IDs currently available from the backend detail contract instead of inventing another backend call in this slice.
+
+**Alternatives considered:** A separate `/tickets/:id` page was deferred because the current app shell benefits from selecting tickets without route churn. Showing full originating message content was deferred until the backend exposes richer ticket context or a dedicated conversation summary endpoint.
+
+**Follow-ups / risks:** Frontend status updates/comments are still future slices. Ticket detail can become richer once backend returns the originating message snippet or conversation title.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Add backend ticket list and detail APIs
 
 **Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
@@ -1451,6 +2587,77 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Link ticket detail back to chat conversation
+
+**Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The ticket detail Conversation context now renders as a router link to the Chat page with `conversationId` in the query string. The Chat page reads that query param after loading conversations and selects the matching conversation automatically.
+
+**Why this approach:** Query params keep the existing Chat route simple while still making ticket-to-conversation navigation explicit and shareable. It avoids adding a new route shape before conversation detail routing is needed elsewhere.
+
+**Alternatives considered:** Adding `/chat/conversations/:id` was deferred because the app currently uses the root Chat workspace route and only needs deep selection behavior for now.
+
+**Follow-ups / risks:** If Chat later gets a dedicated conversation route, this link should move from query params to route params.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Fix chat ticket title and new conversation form layout
+
+**Prompt/task summary:** Make tickets created from chat use the conversation title, and fix the New conversation form UI that expanded incorrectly in the conversation sidebar.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The chat-to-ticket handoff now sends the active conversation title as the ticket title instead of deriving it from the latest message. The conversation sidebar layout now uses flex column sizing so the New conversation form stays compact and the conversation list is the only section that grows and scrolls.
+
+**Why this approach:** The conversation title is the user-defined issue name, so using it for the ticket title keeps chat and ticket records aligned. Flex column sizing is more robust than a fixed two-row grid when optional panels such as the creation form appear conditionally.
+
+**Alternatives considered:** Keeping message-derived ticket titles was rejected because it can diverge from the user's explicit conversation name. Adding more grid rows was rejected because future conditional sidebar controls would recreate the same layout fragility.
+
+**Follow-ups / risks:** Ticket details still show basic chat context only; richer context can be added when the backend exposes conversation title/message snippets directly.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend tickets page and named conversation creation
+
+**Prompt/task summary:** Continue after backend ticket list/detail APIs by adding the frontend Tickets page, and change Chat `New` conversation creation so the user can choose a conversation name.
+
+**Files changed:**
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `/tickets` placeholder route with a real Tickets page that lists tickets, supports status/priority filters, opens detail in the same workspace, and displays title/status/priority/created metadata plus basic chat context via conversation/message IDs. The Chat page `New` action now opens a small title form before creating the conversation.
+
+**Why this approach:** A split list/detail view matches the existing support-workspace layout and keeps repeated ticket triage efficient. For chat context, the frontend displays the IDs currently available from the backend detail contract instead of inventing another backend call in this slice.
+
+**Alternatives considered:** A separate `/tickets/:id` page was deferred because the current app shell benefits from selecting tickets without route churn. Showing full originating message content was deferred until the backend exposes richer ticket context or a dedicated conversation summary endpoint.
+
+**Follow-ups / risks:** Frontend status updates/comments are still future slices. Ticket detail can become richer once backend returns the originating message snippet or conversation title.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Add backend ticket list and detail APIs
 
 **Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
@@ -1528,6 +2735,77 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-01] Link ticket detail back to chat conversation
+
+**Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The ticket detail Conversation context now renders as a router link to the Chat page with `conversationId` in the query string. The Chat page reads that query param after loading conversations and selects the matching conversation automatically.
+
+**Why this approach:** Query params keep the existing Chat route simple while still making ticket-to-conversation navigation explicit and shareable. It avoids adding a new route shape before conversation detail routing is needed elsewhere.
+
+**Alternatives considered:** Adding `/chat/conversations/:id` was deferred because the app currently uses the root Chat workspace route and only needs deep selection behavior for now.
+
+**Follow-ups / risks:** If Chat later gets a dedicated conversation route, this link should move from query params to route params.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Fix chat ticket title and new conversation form layout
+
+**Prompt/task summary:** Make tickets created from chat use the conversation title, and fix the New conversation form UI that expanded incorrectly in the conversation sidebar.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The chat-to-ticket handoff now sends the active conversation title as the ticket title instead of deriving it from the latest message. The conversation sidebar layout now uses flex column sizing so the New conversation form stays compact and the conversation list is the only section that grows and scrolls.
+
+**Why this approach:** The conversation title is the user-defined issue name, so using it for the ticket title keeps chat and ticket records aligned. Flex column sizing is more robust than a fixed two-row grid when optional panels such as the creation form appear conditionally.
+
+**Alternatives considered:** Keeping message-derived ticket titles was rejected because it can diverge from the user's explicit conversation name. Adding more grid rows was rejected because future conditional sidebar controls would recreate the same layout fragility.
+
+**Follow-ups / risks:** Ticket details still show basic chat context only; richer context can be added when the backend exposes conversation title/message snippets directly.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend tickets page and named conversation creation
+
+**Prompt/task summary:** Continue after backend ticket list/detail APIs by adding the frontend Tickets page, and change Chat `New` conversation creation so the user can choose a conversation name.
+
+**Files changed:**
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `/tickets` placeholder route with a real Tickets page that lists tickets, supports status/priority filters, opens detail in the same workspace, and displays title/status/priority/created metadata plus basic chat context via conversation/message IDs. The Chat page `New` action now opens a small title form before creating the conversation.
+
+**Why this approach:** A split list/detail view matches the existing support-workspace layout and keeps repeated ticket triage efficient. For chat context, the frontend displays the IDs currently available from the backend detail contract instead of inventing another backend call in this slice.
+
+**Alternatives considered:** A separate `/tickets/:id` page was deferred because the current app shell benefits from selecting tickets without route churn. Showing full originating message content was deferred until the backend exposes richer ticket context or a dedicated conversation summary endpoint.
+
+**Follow-ups / risks:** Frontend status updates/comments are still future slices. Ticket detail can become richer once backend returns the originating message snippet or conversation title.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Add backend ticket list and detail APIs
 
 **Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
@@ -1634,6 +2912,77 @@ API/web containers are a later compose expansion.
 
 ---
 
+## [2026-08-01] Link ticket detail back to chat conversation
+
+**Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The ticket detail Conversation context now renders as a router link to the Chat page with `conversationId` in the query string. The Chat page reads that query param after loading conversations and selects the matching conversation automatically.
+
+**Why this approach:** Query params keep the existing Chat route simple while still making ticket-to-conversation navigation explicit and shareable. It avoids adding a new route shape before conversation detail routing is needed elsewhere.
+
+**Alternatives considered:** Adding `/chat/conversations/:id` was deferred because the app currently uses the root Chat workspace route and only needs deep selection behavior for now.
+
+**Follow-ups / risks:** If Chat later gets a dedicated conversation route, this link should move from query params to route params.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Fix chat ticket title and new conversation form layout
+
+**Prompt/task summary:** Make tickets created from chat use the conversation title, and fix the New conversation form UI that expanded incorrectly in the conversation sidebar.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The chat-to-ticket handoff now sends the active conversation title as the ticket title instead of deriving it from the latest message. The conversation sidebar layout now uses flex column sizing so the New conversation form stays compact and the conversation list is the only section that grows and scrolls.
+
+**Why this approach:** The conversation title is the user-defined issue name, so using it for the ticket title keeps chat and ticket records aligned. Flex column sizing is more robust than a fixed two-row grid when optional panels such as the creation form appear conditionally.
+
+**Alternatives considered:** Keeping message-derived ticket titles was rejected because it can diverge from the user's explicit conversation name. Adding more grid rows was rejected because future conditional sidebar controls would recreate the same layout fragility.
+
+**Follow-ups / risks:** Ticket details still show basic chat context only; richer context can be added when the backend exposes conversation title/message snippets directly.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend tickets page and named conversation creation
+
+**Prompt/task summary:** Continue after backend ticket list/detail APIs by adding the frontend Tickets page, and change Chat `New` conversation creation so the user can choose a conversation name.
+
+**Files changed:**
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `/tickets` placeholder route with a real Tickets page that lists tickets, supports status/priority filters, opens detail in the same workspace, and displays title/status/priority/created metadata plus basic chat context via conversation/message IDs. The Chat page `New` action now opens a small title form before creating the conversation.
+
+**Why this approach:** A split list/detail view matches the existing support-workspace layout and keeps repeated ticket triage efficient. For chat context, the frontend displays the IDs currently available from the backend detail contract instead of inventing another backend call in this slice.
+
+**Alternatives considered:** A separate `/tickets/:id` page was deferred because the current app shell benefits from selecting tickets without route churn. Showing full originating message content was deferred until the backend exposes richer ticket context or a dedicated conversation summary endpoint.
+
+**Follow-ups / risks:** Frontend status updates/comments are still future slices. Ticket detail can become richer once backend returns the originating message snippet or conversation title.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Add backend ticket list and detail APIs
 
 **Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
@@ -1772,6 +3121,77 @@ commands are scoped to this directory.
 
 ---
 
+## [2026-08-01] Link ticket detail back to chat conversation
+
+**Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The ticket detail Conversation context now renders as a router link to the Chat page with `conversationId` in the query string. The Chat page reads that query param after loading conversations and selects the matching conversation automatically.
+
+**Why this approach:** Query params keep the existing Chat route simple while still making ticket-to-conversation navigation explicit and shareable. It avoids adding a new route shape before conversation detail routing is needed elsewhere.
+
+**Alternatives considered:** Adding `/chat/conversations/:id` was deferred because the app currently uses the root Chat workspace route and only needs deep selection behavior for now.
+
+**Follow-ups / risks:** If Chat later gets a dedicated conversation route, this link should move from query params to route params.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Fix chat ticket title and new conversation form layout
+
+**Prompt/task summary:** Make tickets created from chat use the conversation title, and fix the New conversation form UI that expanded incorrectly in the conversation sidebar.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The chat-to-ticket handoff now sends the active conversation title as the ticket title instead of deriving it from the latest message. The conversation sidebar layout now uses flex column sizing so the New conversation form stays compact and the conversation list is the only section that grows and scrolls.
+
+**Why this approach:** The conversation title is the user-defined issue name, so using it for the ticket title keeps chat and ticket records aligned. Flex column sizing is more robust than a fixed two-row grid when optional panels such as the creation form appear conditionally.
+
+**Alternatives considered:** Keeping message-derived ticket titles was rejected because it can diverge from the user's explicit conversation name. Adding more grid rows was rejected because future conditional sidebar controls would recreate the same layout fragility.
+
+**Follow-ups / risks:** Ticket details still show basic chat context only; richer context can be added when the backend exposes conversation title/message snippets directly.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend tickets page and named conversation creation
+
+**Prompt/task summary:** Continue after backend ticket list/detail APIs by adding the frontend Tickets page, and change Chat `New` conversation creation so the user can choose a conversation name.
+
+**Files changed:**
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `/tickets` placeholder route with a real Tickets page that lists tickets, supports status/priority filters, opens detail in the same workspace, and displays title/status/priority/created metadata plus basic chat context via conversation/message IDs. The Chat page `New` action now opens a small title form before creating the conversation.
+
+**Why this approach:** A split list/detail view matches the existing support-workspace layout and keeps repeated ticket triage efficient. For chat context, the frontend displays the IDs currently available from the backend detail contract instead of inventing another backend call in this slice.
+
+**Alternatives considered:** A separate `/tickets/:id` page was deferred because the current app shell benefits from selecting tickets without route churn. Showing full originating message content was deferred until the backend exposes richer ticket context or a dedicated conversation summary endpoint.
+
+**Follow-ups / risks:** Frontend status updates/comments are still future slices. Ticket detail can become richer once backend returns the originating message snippet or conversation title.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Add backend ticket list and detail APIs
 
 **Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
@@ -1848,6 +3268,77 @@ over alternatives, any constraints from `docs/PROJECT_PLAN.md` that drove the de
 
 ---
 
+## [2026-08-01] Link ticket detail back to chat conversation
+
+**Prompt/task summary:** Make the Conversation field in ticket detail clickable so it opens the linked chat conversation.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The ticket detail Conversation context now renders as a router link to the Chat page with `conversationId` in the query string. The Chat page reads that query param after loading conversations and selects the matching conversation automatically.
+
+**Why this approach:** Query params keep the existing Chat route simple while still making ticket-to-conversation navigation explicit and shareable. It avoids adding a new route shape before conversation detail routing is needed elsewhere.
+
+**Alternatives considered:** Adding `/chat/conversations/:id` was deferred because the app currently uses the root Chat workspace route and only needs deep selection behavior for now.
+
+**Follow-ups / risks:** If Chat later gets a dedicated conversation route, this link should move from query params to route params.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Fix chat ticket title and new conversation form layout
+
+**Prompt/task summary:** Make tickets created from chat use the conversation title, and fix the New conversation form UI that expanded incorrectly in the conversation sidebar.
+
+**Files changed:**
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** The chat-to-ticket handoff now sends the active conversation title as the ticket title instead of deriving it from the latest message. The conversation sidebar layout now uses flex column sizing so the New conversation form stays compact and the conversation list is the only section that grows and scrolls.
+
+**Why this approach:** The conversation title is the user-defined issue name, so using it for the ticket title keeps chat and ticket records aligned. Flex column sizing is more robust than a fixed two-row grid when optional panels such as the creation form appear conditionally.
+
+**Alternatives considered:** Keeping message-derived ticket titles was rejected because it can diverge from the user's explicit conversation name. Adding more grid rows was rejected because future conditional sidebar controls would recreate the same layout fragility.
+
+**Follow-ups / risks:** Ticket details still show basic chat context only; richer context can be added when the backend exposes conversation title/message snippets directly.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add frontend tickets page and named conversation creation
+
+**Prompt/task summary:** Continue after backend ticket list/detail APIs by adding the frontend Tickets page, and change Chat `New` conversation creation so the user can choose a conversation name.
+
+**Files changed:**
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.html`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the `/tickets` placeholder route with a real Tickets page that lists tickets, supports status/priority filters, opens detail in the same workspace, and displays title/status/priority/created metadata plus basic chat context via conversation/message IDs. The Chat page `New` action now opens a small title form before creating the conversation.
+
+**Why this approach:** A split list/detail view matches the existing support-workspace layout and keeps repeated ticket triage efficient. For chat context, the frontend displays the IDs currently available from the backend detail contract instead of inventing another backend call in this slice.
+
+**Alternatives considered:** A separate `/tickets/:id` page was deferred because the current app shell benefits from selecting tickets without route churn. Showing full originating message content was deferred until the backend exposes richer ticket context or a dedicated conversation summary endpoint.
+
+**Follow-ups / risks:** Frontend status updates/comments are still future slices. Ticket detail can become richer once backend returns the originating message snippet or conversation title.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Add backend ticket list and detail APIs
 
 **Prompt/task summary:** Implement the next backend slice for ticket list/detail APIs with status/priority filters and role-scoped authorization.
@@ -1937,6 +3428,9 @@ approach, which is both testable and framework-agnostic.
 revisit whether the transition graph needs an `Admin` override path.
 
 **Reviewed by human:** [ ]
+
+
+
 
 
 

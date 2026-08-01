@@ -5,8 +5,21 @@
         <p class="eyebrow">Support chat</p>
         <h2>Conversations</h2>
       </div>
-      <button type="button" (click)="startConversation()">New</button>
+      <button type="button" (click)="showNewConversationForm()">New</button>
     </div>
+
+    @if (isCreatingNewConversation()) {
+      <form [formGroup]="newConversationForm" (ngSubmit)="startConversation()" class="new-conversation-form">
+        <label>
+          <span>Conversation name</span>
+          <input type="text" formControlName="title" placeholder="Printer issue, Wi-Fi problem, account access" />
+        </label>
+        <div class="new-conversation-actions">
+          <button type="submit" [disabled]="isCreatingConversation()">{{ isCreatingConversation() ? 'Creating...' : 'Create' }}</button>
+          <button type="button" class="secondary" (click)="cancelNewConversation()">Cancel</button>
+        </div>
+      </form>
+    }
 
     @if (isLoadingConversations()) {
       <p class="muted">Loading conversations...</p>
@@ -73,3 +86,5 @@
     </form>
   </section>
 </section>
+
+

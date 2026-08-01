@@ -502,10 +502,10 @@ public default passwords.
 | **0. Setup** | Repo scaffolding, Docker Compose skeleton, CI skeleton, empty Clean Architecture solution + Angular workspace | 0.5–1 day |
 | **1. Auth & Authorization** | Register/login, JWT, role-based guards (FE + BE) | 1–2 days |
 | **2. Core data model** | EF Core entities/migrations for Users, Conversations, Messages, Tickets, KB docs/chunks | 1 day |
-| **3. Chat happy path (no AI yet)** | Send/receive messages, persistence, basic UI, no intent/RAG — proves the plumbing | 1–2 days |
+| **3. Chat happy path (no AI yet)** | Send/receive messages, persistence, named conversations, basic UI, no intent/RAG - proves the plumbing | 1-2 days |
 | **4. AI integration** | Groq chat completion + streaming, intent classification | 1–2 days |
 | **5. RAG pipeline** | Document upload, chunking, embeddings, vector search, grounded answers | 2–3 days |
-| **6. Ticketing + Discord** | Auto ticket creation, status lifecycle, Discord webhook, dashboard | 1–2 days |
+| **6. Ticketing + Discord** | Auto ticket creation, ticket list/detail UI, status lifecycle, Discord webhook, dashboard | 1-2 days |
 | **7. Hardening** | Tests to target coverage, rate limiting, logging/health checks, docs pass | 2–3 days |
 | **8. Polish** | UI/UX pass, loading/error states, responsive layout | 1–2 days |
 
@@ -520,3 +520,4 @@ This project expects AI coding agents (Claude Code, Cursor, Copilot, etc.) to co
 code. To keep that traceable and reviewable, every AI-assisted change must be logged. The
 rules for agents live in **`AGENTS.md`** at the repo root, and the log itself lives in
 **`docs/ai-changelog/AI_CHANGELOG.md`**. See both files for the exact process.
+
