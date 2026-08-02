@@ -16,6 +16,7 @@ public sealed class AppDbContext : DbContext, IUnitOfWork
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<Ticket> Tickets => Set<Ticket>();
     public DbSet<TicketComment> TicketComments => Set<TicketComment>();
+    public DbSet<TicketActivity> TicketActivities => Set<TicketActivity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -14,10 +14,12 @@ erDiagram
     USERS ||--o{ TICKETS : creates
     USERS ||--o{ TICKETS : "assigned to (nullable)"
     USERS ||--o{ TICKET_COMMENTS : writes
+    USERS ||--o{ TICKET_ACTIVITIES : performs
     CONVERSATIONS ||--o{ MESSAGES : contains
     CONVERSATIONS ||--o{ TICKETS : "may generate"
     MESSAGES ||--o| TICKETS : "triggers (nullable)"
     TICKETS ||--o{ TICKET_COMMENTS : has
+    TICKETS ||--o{ TICKET_ACTIVITIES : records
     KNOWLEDGE_DOCUMENTS ||--o{ DOCUMENT_CHUNKS : "split into"
     DOCUMENT_CHUNKS ||--o{ MESSAGE_SOURCES : "cited by"
     MESSAGES ||--o{ MESSAGE_SOURCES : cites
@@ -81,6 +83,17 @@ erDiagram
         timestamptz created_at
     }
 
+    TICKET_ACTIVITIES {
+        uuid id PK
+        uuid ticket_id FK
+        uuid actor_id FK
+        string action "TicketCreated | Assigned | StatusChanged"
+        string field "nullable"
+        string old_value "nullable"
+        string new_value "nullable"
+        timestamptz created_at
+    }
+
     KNOWLEDGE_DOCUMENTS {
         uuid id PK
         string title
@@ -137,6 +150,10 @@ erDiagram
 
 ### `ticket_comments`
 - Comments are linked to both the ticket and author so future list/detail endpoints can enforce owner/staff access while preserving an audit trail.
+
+### `ticket_activities`
+- Records audit events for ticket creation, assignment changes, and status changes.
+- `actor_id` stores the user who performed the change. `old_value` and `new_value` store compact string snapshots so the log remains understandable even if the ticket changes again later.
 
 ### `knowledge_documents` / `document_chunks`
 - `embedding` uses `pgvector`'s `vector(n)` type, where `n` matches the chosen embedding

@@ -1,3 +1,16 @@
+## [2026-08-02] Fix ticket thread route wiring
+
+**Prompt/task summary:** Fix 404s from ticket comments/activity requests and remove the Angular reactive-form disabled warning on the ticket assignment dropdown.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added the missing controller actions for listing ticket comments, creating a comment, and listing ticket activities. Updated the assignment dropdown so disabled/enabled state is managed through the reactive form control API instead of the template `disabled` attribute.
+
+**Verification:** `dotnet test backend/HelpdeskTicketingSystem.slnx` passed 44 tests. `dotnet build backend/src/Api/Api.csproj` passed. `npm test -- --watch=false` passed 2 tests. `npm run build` passed. Local unauthenticated checks to `/api/v1/tickets/{id}/comments` and `/activities` now return 401, confirming the routes are registered instead of 404.
 # AI Changelog
 
 A running log of every AI-assisted/AI-agentic change made in this repository: what was
@@ -12,6 +25,89 @@ Newest entries at the top.
 
 ---
 
+## [2026-08-02] Add ticket comments and activity log
+
+**Prompt/task summary:** Add ticket comments, ticket detail activity logs, and tighten IT agent status updates so only the assigned agent can change status.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Application/Chat/Commands/CreateTicketFromMessage/CreateTicketFromMessageCommandHandler.cs`
+- `backend/src/Application/Common/Interfaces/ITicketActivityRepository.cs`
+- `backend/src/Application/Common/Interfaces/ITicketCommentRepository.cs`
+- `backend/src/Application/Tickets/Commands/CreateTicketComment/*`
+- `backend/src/Application/Tickets/Commands/UpdateTicketAssignment/UpdateTicketAssignmentCommandHandler.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketStatus/UpdateTicketStatusCommandHandler.cs`
+- `backend/src/Application/Tickets/Models/TicketActivityDto.cs`
+- `backend/src/Application/Tickets/Models/TicketCommentDto.cs`
+- `backend/src/Application/Tickets/Queries/GetTicketActivities/*`
+- `backend/src/Application/Tickets/Queries/GetTicketComments/*`
+- `backend/src/CompositionRoot/DependencyInjection.cs`
+- `backend/src/Domain/Entities/TicketActivity.cs`
+- `backend/src/Infrastructure/Persistence/AppDbContext.cs`
+- `backend/src/Infrastructure/Persistence/Configurations/TicketActivityConfiguration.cs`
+- `backend/src/Infrastructure/Persistence/Migrations/*AddTicketActivities*`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketActivityRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/TicketCommentRepository.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketAssignmentCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ER_DIAGRAM.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+- `frontend/angular.json`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+
+**What changed:** Added ticket comments APIs/UI and ticket activity APIs/UI. Ticket creation, assignment changes, and status changes now write activity rows. The frontend loads comments and activity when a ticket is selected and refreshes activity after assignment/status mutations. IT agents can now update status only when the ticket is assigned to them; unassigned tickets can still be claimed first through assignment.
+
+**Why this approach:** Comments and activity are separate records because both are append-only ticket history, not properties of the ticket itself. Activity is written in the same Application command that mutates ticket state, keeping audit logging close to the business action and in the same unit of work.
+
+**Alternatives considered:** Storing activity as JSON on `tickets` was rejected because it would make ordering, filtering, and future pagination harder. Allowing IT agents to update unassigned ticket status was removed because assignment should define who owns the work.
+
+**Follow-ups / risks:** Add dedicated tests for comment/activity query handlers if this area grows. Add activity pagination if ticket history becomes long.
+
+**Reviewed by human:** [ ]
+
+---
+## [2026-08-01] Add ticket assignment workflow
+
+**Prompt/task summary:** Add ticket assignment so IT agents can assign tickets only to themselves, while IT admins can assign tickets to other agents through a dropdown.
+
+**Files changed:**
+- `backend/src/Api/Controllers/TicketsController.cs`
+- `backend/src/Api/Controllers/UsersController.cs`
+- `backend/src/Application/Common/Interfaces/IUserRepository.cs`
+- `backend/src/Application/Tickets/Commands/UpdateTicketAssignment/*`
+- `backend/src/Application/Users/Models/AgentDto.cs`
+- `backend/src/Application/Users/Queries/ListAgents/*`
+- `backend/src/Infrastructure/Persistence/Repositories/UserRepository.cs`
+- `backend/tests/Application.UnitTests/Auth/AuthCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketAssignmentCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketQueryHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Tickets/TicketStatusCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/Users/ListAgentsQueryHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+- `frontend/src/app/features/tickets/data-access/ticket.models.ts`
+- `frontend/src/app/features/tickets/data-access/ticket.service.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+
+**What changed:** Added `PATCH /api/v1/tickets/{ticketId}/assignment` and `GET /api/v1/users/agents`. Assignment rules are enforced in the Application layer: employees cannot assign, IT agents can assign only themselves and only from unassigned/self-assigned tickets, and IT admins can assign tickets to IT agents. The Tickets page now shows `Assign to me` for eligible agents and an admin-only agent dropdown.
+
+**Why this approach:** Assignment is a ticket use case, so the mutation lives under `Application/Tickets/Commands`, while the dropdown source is a user query. The backend returns the updated ticket detail so the frontend can update the selected detail and list row without a separate refetch.
+
+**Alternatives considered:** Allowing unassign/reassign controls for everyone was deferred because the requested rule was intentionally narrower. Returning all users to the dropdown was rejected because only IT agents are valid assignees.
+
+**Follow-ups / risks:** Add component tests for role-specific assignment controls once the Tickets page has dedicated frontend test coverage. Consider an admin unassign action later if queue management needs it.
+
+**Reviewed by human:** [ ]
+
+---
 ## [2026-08-01] Restrict ticket conversation deep links to owners
 
 **Prompt/task summary:** Prevent ITAgent and ITAdmin users from clicking through to a ticket's linked conversation when they are not the owner of that conversation.

@@ -23,6 +23,8 @@ public static class DependencyInjection
         services.AddScoped<IConversationRepository, ConversationRepository>();
         services.AddScoped<IMessageRepository, MessageRepository>();
         services.AddScoped<ITicketRepository, TicketRepository>();
+        services.AddScoped<ITicketCommentRepository, TicketCommentRepository>();
+        services.AddScoped<ITicketActivityRepository, TicketActivityRepository>();
         services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<AppDbContext>());
         services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();

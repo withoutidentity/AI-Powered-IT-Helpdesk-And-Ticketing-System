@@ -1,134 +1,163 @@
 using Application.Common.Interfaces;
 using Application.Common.Models;
-using Application.Tickets.Commands.UpdateTicketStatus;
+using Application.Tickets.Commands.UpdateTicketAssignment;
 using Domain.Entities;
 using Domain.Enums;
 using FluentAssertions;
 
 namespace Application.UnitTests.Tickets;
 
-public sealed class TicketStatusCommandHandlerTests
+public sealed class TicketAssignmentCommandHandlerTests
 {
     [Fact]
-    public async Task UpdateTicketStatus_ITAgentAssignedTicket_TransitionsOpenToInProgress()
+    public async Task UpdateTicketAssignment_ITAgentUnassignedTicket_AssignsToSelf()
     {
         var agent = User.Create("agent", "agent@example.com", "hash", UserRole.ITAgent, "IT", DateTimeOffset.UtcNow);
         var employee = User.Create("employee", "employee@example.com", "hash", UserRole.Employee, "IT", DateTimeOffset.UtcNow);
         var ticket = CreateTicket(employee.Id, "Printer");
-        ticket.AssignTo(agent.Id, DateTimeOffset.UtcNow);
         var unitOfWork = new FakeUnitOfWork();
-        var handler = new UpdateTicketStatusCommandHandler(
+        var handler = new UpdateTicketAssignmentCommandHandler(
             new FakeCurrentUserService(agent.Id, UserRole.ITAgent),
             new FakeTicketRepository(ticket),
             new FakeUserRepository(agent, employee),
             new FakeTicketActivityRepository(),
             unitOfWork);
 
-        var result = await handler.Handle(new UpdateTicketStatusCommand(ticket.Id, "InProgress"), CancellationToken.None);
+        var result = await handler.Handle(new UpdateTicketAssignmentCommand(ticket.Id, agent.Id), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value!.Status.Should().Be("InProgress");
-        ticket.Status.Should().Be(TicketStatus.InProgress);
+        result.Value!.AssignedTo.Should().NotBeNull();
+        result.Value.AssignedTo!.Id.Should().Be(agent.Id);
+        ticket.AssignedTo.Should().Be(agent.Id);
         unitOfWork.SaveCalls.Should().Be(1);
     }
 
     [Fact]
-    public async Task UpdateTicketStatus_ITAdminAssignedToOtherTicket_TransitionsInProgressToResolved()
+    public async Task UpdateTicketAssignment_ITAgentTargetsOtherAgent_ReturnsForbidden()
     {
-        var admin = User.Create("admin", "admin@example.com", "hash", UserRole.ITAdmin, "IT", DateTimeOffset.UtcNow);
         var agent = User.Create("agent", "agent@example.com", "hash", UserRole.ITAgent, "IT", DateTimeOffset.UtcNow);
-        var employee = User.Create("employee", "employee@example.com", "hash", UserRole.Employee, "IT", DateTimeOffset.UtcNow);
-        var ticket = CreateTicket(employee.Id, "Printer");
-        ticket.UpdateStatus(TicketStatus.InProgress, DateTimeOffset.UtcNow);
-        var handler = new UpdateTicketStatusCommandHandler(
-            new FakeCurrentUserService(admin.Id, UserRole.ITAdmin),
-            new FakeTicketRepository(ticket),
-            new FakeUserRepository(admin, agent, employee),
-            new FakeTicketActivityRepository(),
-            new FakeUnitOfWork());
-
-        var result = await handler.Handle(new UpdateTicketStatusCommand(ticket.Id, "Resolved"), CancellationToken.None);
-
-        result.IsSuccess.Should().BeTrue();
-        result.Value!.Status.Should().Be("Resolved");
-    }
-
-    [Fact]
-    public async Task UpdateTicketStatus_EmployeeOwnTicket_ReturnsForbidden()
-    {
+        var otherAgent = User.Create("other.agent", "other.agent@example.com", "hash", UserRole.ITAgent, "IT", DateTimeOffset.UtcNow);
         var employee = User.Create("employee", "employee@example.com", "hash", UserRole.Employee, "IT", DateTimeOffset.UtcNow);
         var ticket = CreateTicket(employee.Id, "Printer");
         var unitOfWork = new FakeUnitOfWork();
-        var handler = new UpdateTicketStatusCommandHandler(
-            new FakeCurrentUserService(employee.Id, UserRole.Employee),
+        var handler = new UpdateTicketAssignmentCommandHandler(
+            new FakeCurrentUserService(agent.Id, UserRole.ITAgent),
             new FakeTicketRepository(ticket),
-            new FakeUserRepository(employee),
+            new FakeUserRepository(agent, otherAgent, employee),
             new FakeTicketActivityRepository(),
             unitOfWork);
 
-        var result = await handler.Handle(new UpdateTicketStatusCommand(ticket.Id, "InProgress"), CancellationToken.None);
+        var result = await handler.Handle(new UpdateTicketAssignmentCommand(ticket.Id, otherAgent.Id), CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
         result.ErrorCode.Should().Be("Forbidden");
-        ticket.Status.Should().Be(TicketStatus.Open);
+        ticket.AssignedTo.Should().BeNull();
         unitOfWork.SaveCalls.Should().Be(0);
     }
 
     [Fact]
-    public async Task UpdateTicketStatus_ITAgentAssignedToOtherTicket_ReturnsForbidden()
+    public async Task UpdateTicketAssignment_ITAgentTicketAssignedToOtherAgent_ReturnsForbidden()
     {
         var agent = User.Create("agent", "agent@example.com", "hash", UserRole.ITAgent, "IT", DateTimeOffset.UtcNow);
         var otherAgent = User.Create("other.agent", "other.agent@example.com", "hash", UserRole.ITAgent, "IT", DateTimeOffset.UtcNow);
         var employee = User.Create("employee", "employee@example.com", "hash", UserRole.Employee, "IT", DateTimeOffset.UtcNow);
         var ticket = CreateTicket(employee.Id, "Printer");
         ticket.AssignTo(otherAgent.Id, DateTimeOffset.UtcNow);
-        var handler = new UpdateTicketStatusCommandHandler(
+        var unitOfWork = new FakeUnitOfWork();
+        var handler = new UpdateTicketAssignmentCommandHandler(
             new FakeCurrentUserService(agent.Id, UserRole.ITAgent),
             new FakeTicketRepository(ticket),
             new FakeUserRepository(agent, otherAgent, employee),
             new FakeTicketActivityRepository(),
-            new FakeUnitOfWork());
+            unitOfWork);
 
-        var result = await handler.Handle(new UpdateTicketStatusCommand(ticket.Id, "InProgress"), CancellationToken.None);
+        var result = await handler.Handle(new UpdateTicketAssignmentCommand(ticket.Id, agent.Id), CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
         result.ErrorCode.Should().Be("Forbidden");
+        ticket.AssignedTo.Should().Be(otherAgent.Id);
+        unitOfWork.SaveCalls.Should().Be(0);
     }
 
     [Fact]
-    public async Task UpdateTicketStatus_OpenToResolved_ReturnsInvalidStatusTransition()
+    public async Task UpdateTicketAssignment_ITAdminTargetsAgent_AssignsTicket()
+    {
+        var admin = User.Create("admin", "admin@example.com", "hash", UserRole.ITAdmin, "IT", DateTimeOffset.UtcNow);
+        var agent = User.Create("agent", "agent@example.com", "hash", UserRole.ITAgent, "IT", DateTimeOffset.UtcNow);
+        var employee = User.Create("employee", "employee@example.com", "hash", UserRole.Employee, "IT", DateTimeOffset.UtcNow);
+        var ticket = CreateTicket(employee.Id, "Printer");
+        var unitOfWork = new FakeUnitOfWork();
+        var handler = new UpdateTicketAssignmentCommandHandler(
+            new FakeCurrentUserService(admin.Id, UserRole.ITAdmin),
+            new FakeTicketRepository(ticket),
+            new FakeUserRepository(admin, agent, employee),
+            new FakeTicketActivityRepository(),
+            unitOfWork);
+
+        var result = await handler.Handle(new UpdateTicketAssignmentCommand(ticket.Id, agent.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.AssignedTo!.Username.Should().Be("agent");
+        ticket.AssignedTo.Should().Be(agent.Id);
+        unitOfWork.SaveCalls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task UpdateTicketAssignment_ITAdminTargetsEmployee_ReturnsInvalidAssignee()
     {
         var admin = User.Create("admin", "admin@example.com", "hash", UserRole.ITAdmin, "IT", DateTimeOffset.UtcNow);
         var employee = User.Create("employee", "employee@example.com", "hash", UserRole.Employee, "IT", DateTimeOffset.UtcNow);
         var ticket = CreateTicket(employee.Id, "Printer");
         var unitOfWork = new FakeUnitOfWork();
-        var handler = new UpdateTicketStatusCommandHandler(
+        var handler = new UpdateTicketAssignmentCommandHandler(
             new FakeCurrentUserService(admin.Id, UserRole.ITAdmin),
             new FakeTicketRepository(ticket),
             new FakeUserRepository(admin, employee),
             new FakeTicketActivityRepository(),
             unitOfWork);
 
-        var result = await handler.Handle(new UpdateTicketStatusCommand(ticket.Id, "Resolved"), CancellationToken.None);
+        var result = await handler.Handle(new UpdateTicketAssignmentCommand(ticket.Id, employee.Id), CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
-        result.ErrorCode.Should().Be("InvalidStatusTransition");
-        ticket.Status.Should().Be(TicketStatus.Open);
+        result.ErrorCode.Should().Be("InvalidAssignee");
+        ticket.AssignedTo.Should().BeNull();
         unitOfWork.SaveCalls.Should().Be(0);
     }
 
     [Fact]
-    public async Task UpdateTicketStatus_MissingTicket_ReturnsNotFound()
+    public async Task UpdateTicketAssignment_EmployeeOwnTicket_ReturnsForbidden()
     {
-        var adminId = Guid.NewGuid();
-        var handler = new UpdateTicketStatusCommandHandler(
-            new FakeCurrentUserService(adminId, UserRole.ITAdmin),
+        var employee = User.Create("employee", "employee@example.com", "hash", UserRole.Employee, "IT", DateTimeOffset.UtcNow);
+        var agent = User.Create("agent", "agent@example.com", "hash", UserRole.ITAgent, "IT", DateTimeOffset.UtcNow);
+        var ticket = CreateTicket(employee.Id, "Printer");
+        var unitOfWork = new FakeUnitOfWork();
+        var handler = new UpdateTicketAssignmentCommandHandler(
+            new FakeCurrentUserService(employee.Id, UserRole.Employee),
+            new FakeTicketRepository(ticket),
+            new FakeUserRepository(employee, agent),
+            new FakeTicketActivityRepository(),
+            unitOfWork);
+
+        var result = await handler.Handle(new UpdateTicketAssignmentCommand(ticket.Id, agent.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be("Forbidden");
+        unitOfWork.SaveCalls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task UpdateTicketAssignment_MissingTicket_ReturnsNotFound()
+    {
+        var admin = User.Create("admin", "admin@example.com", "hash", UserRole.ITAdmin, "IT", DateTimeOffset.UtcNow);
+        var agent = User.Create("agent", "agent@example.com", "hash", UserRole.ITAgent, "IT", DateTimeOffset.UtcNow);
+        var handler = new UpdateTicketAssignmentCommandHandler(
+            new FakeCurrentUserService(admin.Id, UserRole.ITAdmin),
             new FakeTicketRepository(),
-            new FakeUserRepository(),
+            new FakeUserRepository(admin, agent),
             new FakeTicketActivityRepository(),
             new FakeUnitOfWork());
 
-        var result = await handler.Handle(new UpdateTicketStatusCommand(Guid.NewGuid(), "InProgress"), CancellationToken.None);
+        var result = await handler.Handle(new UpdateTicketAssignmentCommand(Guid.NewGuid(), agent.Id), CancellationToken.None);
 
         result.IsSuccess.Should().BeFalse();
         result.ErrorCode.Should().Be("TicketNotFound");

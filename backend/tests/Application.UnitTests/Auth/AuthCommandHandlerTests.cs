@@ -141,6 +141,12 @@ public sealed class AuthCommandHandlerTests
             return Task.FromResult(result);
         }
 
+        public Task<IReadOnlyList<User>> ListByRoleAsync(UserRole role, CancellationToken cancellationToken)
+        {
+            IReadOnlyList<User> result = Items.Where(user => user.Role == role).ToList();
+            return Task.FromResult(result);
+        }
+
         public Task<User?> GetByUsernameAsync(string username, CancellationToken cancellationToken)
         {
             return Task.FromResult(Items.FirstOrDefault(user => user.Username == username.Trim()));

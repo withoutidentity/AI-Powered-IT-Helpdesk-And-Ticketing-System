@@ -121,7 +121,28 @@ self-contained demo/dev flow.
 
 ---
 
-## 2. Chat
+## 2. Users
+
+### `GET /users/agents`
+Returns IT agents that an admin can assign tickets to. The Angular Tickets detail page uses this endpoint to populate the admin-only assignment dropdown.
+
+**Auth required:** `ITAdmin`
+
+**Response `200 OK`**
+```json
+[
+  {
+    "id": "b7c8...",
+    "username": "it.agent"
+  }
+]
+```
+
+**Errors:** `403` only IT admins can list assignable agents
+
+---
+
+## 3. Chat
 
 > **Frontend chat implementation note:** the Angular Chat route currently consumes these no-AI JSON endpoints directly. Streaming and RAG source citations are future AI/RAG slice behavior.
 
@@ -274,7 +295,7 @@ Creates the single ticket for a conversation from a persisted user message in th
 
 ---
 
-## 3. Knowledge Base (Admin)
+## 4. Knowledge Base (Admin)
 
 ### `POST /kb/documents`
 Uploads a document for the RAG pipeline. Multipart form upload.
@@ -331,7 +352,7 @@ Removes the document and its chunks.
 
 ---
 
-## 4. Tickets
+## 5. Tickets
 
 ### `GET /tickets`
 Lists tickets visible to the authenticated user. The Angular Tickets page consumes this endpoint for the ticket list and status/priority filters.
@@ -403,7 +424,7 @@ Returns one ticket if it is visible to the authenticated user. The Angular Ticke
 ### `PATCH /tickets/{ticketId}/status`
 Updates a ticket status along the v1 workflow: `Open -> InProgress -> Resolved -> Closed`. The Angular Tickets detail view exposes this as a next-status action for `ITAgent` and `ITAdmin` users.
 
-**Auth required:** `ITAgent` for tickets assigned to them or unassigned queue tickets, `ITAdmin` for any ticket. `Employee` cannot update status in this slice.
+**Auth required:** `ITAgent` only for tickets assigned to them, `ITAdmin` for any ticket. `Employee` cannot update status in this slice.
 
 **Request**
 ```json
@@ -416,8 +437,48 @@ Updates a ticket status along the v1 workflow: `Open -> InProgress -> Resolved -
 
 ---
 
+### `PATCH /tickets/{ticketId}/assignment`
+Assigns a ticket to an IT agent. The Angular Tickets detail view exposes this as `Assign to me` for IT agents and an agent dropdown for IT admins.
+
+**Auth required:** `ITAgent` can assign only themselves, and only when the ticket is unassigned or already assigned to them. `ITAdmin` can assign any visible ticket to any `ITAgent`. `Employee` cannot assign tickets.
+
+**Request**
+```json
+{ "assignedToUserId": "b7c8..." }
+```
+
+**Response `200 OK`** - updated ticket detail object.
+
+**Errors:** `403` not allowed to assign this ticket, `404` ticket or assignee not found, `400` assignee is not an IT agent or validation failed.
+
+---
+
+### `GET /tickets/{ticketId}/comments`
+Lists comments on a ticket in chronological order.
+
+**Auth required:** Ticket owner `Employee`, assigned/unassigned-queue `ITAgent`, or `ITAdmin`.
+
+**Response `200 OK`**
+```json
+[
+  {
+    "id": "cm1...",
+    "ticketId": "t1042...",
+    "author": { "id": "b7c8...", "username": "it.agent" },
+    "content": "Replaced the toner cartridge, testing now.",
+    "createdAt": "2026-07-29T10:00:00Z"
+  }
+]
+```
+
+**Errors:** `403` ticket outside user scope, `404` ticket not found
+
+---
+
 ### `POST /tickets/{ticketId}/comments`
-**Auth required:** Ticket owner, assigned `ITAgent`, or `ITAdmin`
+Adds a comment to a ticket.
+
+**Auth required:** Ticket owner `Employee`, assigned/unassigned-queue `ITAgent`, or `ITAdmin`.
 
 **Request**
 ```json
@@ -429,14 +490,41 @@ Updates a ticket status along the v1 workflow: `Open -> InProgress -> Resolved -
 {
   "id": "cm1...",
   "ticketId": "t1042...",
-  "authorId": "b7c8...",
+  "author": { "id": "b7c8...", "username": "it.agent" },
   "content": "Replaced the toner cartridge, testing now.",
   "createdAt": "2026-07-29T10:00:00Z"
 }
 ```
 
+**Errors:** `400` empty/too-long comment, `403` ticket outside user scope, `404` ticket not found
+
 ---
-## 5. Dashboard
+
+### `GET /tickets/{ticketId}/activities`
+Lists audit activity on a ticket in chronological order. Activity rows are created when a ticket is opened, assigned, or status changes.
+
+**Auth required:** Ticket owner `Employee`, assigned/unassigned-queue `ITAgent`, or `ITAdmin`.
+
+**Response `200 OK`**
+```json
+[
+  {
+    "id": "ta1...",
+    "ticketId": "t1042...",
+    "actor": { "id": "b7c8...", "username": "it.agent" },
+    "action": "StatusChanged",
+    "field": "status",
+    "oldValue": "Open",
+    "newValue": "InProgress",
+    "createdAt": "2026-07-29T10:00:00Z"
+  }
+]
+```
+
+**Errors:** `403` ticket outside user scope, `404` ticket not found
+
+---
+## 6. Dashboard
 
 ### `GET /dashboard/stats`
 **Auth required:** `ITAgent`, `ITAdmin`
@@ -458,7 +546,7 @@ Updates a ticket status along the v1 workflow: `Open -> InProgress -> Resolved -
 
 ---
 
-## 6. Health
+## 7. Health
 
 ### `GET /health/live`
 **Auth required:** No

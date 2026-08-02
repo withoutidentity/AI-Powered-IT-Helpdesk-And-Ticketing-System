@@ -13,6 +13,7 @@ public sealed class CreateTicketFromMessageCommandHandler : IRequestHandler<Crea
     private readonly IConversationRepository _conversations;
     private readonly IMessageRepository _messages;
     private readonly ITicketRepository _tickets;
+    private readonly ITicketActivityRepository _activities;
     private readonly IUnitOfWork _unitOfWork;
 
     public CreateTicketFromMessageCommandHandler(
@@ -20,12 +21,14 @@ public sealed class CreateTicketFromMessageCommandHandler : IRequestHandler<Crea
         IConversationRepository conversations,
         IMessageRepository messages,
         ITicketRepository tickets,
+        ITicketActivityRepository activities,
         IUnitOfWork unitOfWork)
     {
         _currentUser = currentUser;
         _conversations = conversations;
         _messages = messages;
         _tickets = tickets;
+        _activities = activities;
         _unitOfWork = unitOfWork;
     }
 
@@ -70,6 +73,14 @@ public sealed class CreateTicketFromMessageCommandHandler : IRequestHandler<Crea
             priority);
 
         await _tickets.AddAsync(ticket, cancellationToken);
+        await _activities.AddAsync(TicketActivity.Create(
+            ticket.Id,
+            _currentUser.UserId,
+            "TicketCreated",
+            ticket.CreatedAt,
+            "status",
+            null,
+            ticket.Status.ToString()), cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result<TicketDto>.Success(ToDto(ticket));

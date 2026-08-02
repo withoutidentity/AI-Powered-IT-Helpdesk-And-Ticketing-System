@@ -71,7 +71,7 @@
         </div>
         <div class="detail-actions">
           <span [class]="'priority-pill ' + ticket.priority.toLowerCase()">{{ ticket.priority }}</span>
-          @if (canUpdateStatus() && nextStatus(); as next) {
+          @if (canUpdateTicketStatus(ticket) && nextStatus(); as next) {
             <button type="button" class="status-action" [disabled]="isUpdatingStatus()" (click)="updateStatus()">
               {{ isUpdatingStatus() ? 'Updating...' : 'Move to ' + statusLabel(next) }}
             </button>
@@ -96,9 +96,29 @@
           <span>Created by</span>
           <strong>{{ ticket.createdBy.username }}</strong>
         </div>
-        <div>
+        <div class="assignment-card">
           <span>Assigned to</span>
           <strong>{{ ticket.assignedTo?.username ?? 'Unassigned' }}</strong>
+
+          @if (canAssignToSelf(ticket)) {
+            <button type="button" class="secondary compact-action" [disabled]="isUpdatingAssignment()" (click)="assignToSelf(ticket)">
+              {{ isUpdatingAssignment() ? 'Assigning...' : 'Assign to me' }}
+            </button>
+          }
+
+          @if (isITAdmin()) {
+            <form [formGroup]="assignmentForm" (ngSubmit)="assignSelectedAgent(ticket)" class="assignment-form">
+              <select formControlName="assignedToUserId">
+                <option value="">Select agent</option>
+                @for (agent of assignableAgents(); track agent.id) {
+                  <option [value]="agent.id">{{ agent.username }}</option>
+                }
+              </select>
+              <button type="submit" class="compact-action" [disabled]="isLoadingAgents() || isUpdatingAssignment() || !assignmentForm.getRawValue().assignedToUserId">
+                {{ isUpdatingAssignment() ? 'Assigning...' : 'Assign' }}
+              </button>
+            </form>
+          }
         </div>
       </div>
 
@@ -124,6 +144,58 @@
           <div>
             <span>Origin message</span>
             <code>{{ ticket.messageId ?? 'Not linked' }}</code>
+          </div>
+        </div>
+      </section>
+      <section class="detail-section thread-section">
+        <div class="thread-grid">
+          <div class="thread-panel">
+            <p class="section-label">Comments</p>
+            <form [formGroup]="commentForm" (ngSubmit)="postComment(ticket)" class="comment-form">
+              <textarea formControlName="content" rows="3" maxlength="2000" placeholder="Add a ticket comment"></textarea>
+              <button type="submit" class="compact-action" [disabled]="isPostingComment() || !commentForm.getRawValue().content.trim()">
+                {{ isPostingComment() ? 'Posting...' : 'Post comment' }}
+              </button>
+            </form>
+
+            @if (isLoadingThreads()) {
+              <p class="muted inline-muted">Loading comments...</p>
+            } @else if (comments().length === 0) {
+              <p class="muted inline-muted">No comments yet.</p>
+            } @else {
+              <div class="thread-list">
+                @for (comment of comments(); track comment.id) {
+                  <article class="thread-item">
+                    <div>
+                      <strong>{{ comment.author.username }}</strong>
+                      <time>{{ comment.createdAt | date: 'short' }}</time>
+                    </div>
+                    <p>{{ comment.content }}</p>
+                  </article>
+                }
+              </div>
+            }
+          </div>
+
+          <div class="thread-panel">
+            <p class="section-label">Activity</p>
+            @if (isLoadingThreads()) {
+              <p class="muted inline-muted">Loading activity...</p>
+            } @else if (activities().length === 0) {
+              <p class="muted inline-muted">No activity yet.</p>
+            } @else {
+              <div class="thread-list activity-list">
+                @for (activity of activities(); track activity.id) {
+                  <article class="thread-item activity-item">
+                    <div>
+                      <strong>{{ activity.actor.username }}</strong>
+                      <time>{{ activity.createdAt | date: 'short' }}</time>
+                    </div>
+                    <p>{{ activityText(activity) }}</p>
+                  </article>
+                }
+              </div>
+            }
           </div>
         </div>
       </section>

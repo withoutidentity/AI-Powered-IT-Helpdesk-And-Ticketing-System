@@ -1,5 +1,6 @@
 using Application.Common.Interfaces;
 using Domain.Entities;
+using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Persistence.Repositories;
@@ -27,6 +28,15 @@ public sealed class UserRepository : IUserRepository
 
         return await _dbContext.Users
             .Where(user => ids.Contains(user.Id))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<User>> ListByRoleAsync(UserRole role, CancellationToken cancellationToken)
+    {
+        return await _dbContext.Users
+            .AsNoTracking()
+            .Where(user => user.Role == role)
+            .OrderBy(user => user.Username)
             .ToListAsync(cancellationToken);
     }
 

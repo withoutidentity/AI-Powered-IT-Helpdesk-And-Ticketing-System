@@ -2,9 +2,9 @@ import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { finalize } from 'rxjs';
+import { finalize, forkJoin } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
-import { TicketDetail, TicketPriority, TicketStatus, TicketSummary } from '../data-access/ticket.models';
+import { TicketActivity, TicketComment, TicketDetail, TicketPriority, TicketStatus, TicketSummary, UserRef } from '../data-access/ticket.models';
 import { TicketService } from '../data-access/ticket.service';
 
 @Component({
@@ -21,9 +21,16 @@ export class TicketListPageComponent implements OnInit {
   readonly tickets = signal<TicketSummary[]>([]);
   readonly selectedTicket = signal<TicketDetail | null>(null);
   readonly selectedTicketId = signal<string | null>(null);
+  readonly assignableAgents = signal<UserRef[]>([]);
+  readonly comments = signal<TicketComment[]>([]);
+  readonly activities = signal<TicketActivity[]>([]);
   readonly isLoadingTickets = signal(false);
   readonly isLoadingDetail = signal(false);
+  readonly isLoadingAgents = signal(false);
+  readonly isLoadingThreads = signal(false);
   readonly isUpdatingStatus = signal(false);
+  readonly isUpdatingAssignment = signal(false);
+  readonly isPostingComment = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly statusMessage = signal<string | null>(null);
   readonly totalCount = signal(0);
@@ -31,10 +38,8 @@ export class TicketListPageComponent implements OnInit {
   readonly pageSize = 20;
 
   readonly hasTickets = computed(() => this.tickets().length > 0);
-  readonly canUpdateStatus = computed(() => {
-    const role = this.auth.currentUser()?.role;
-    return role === 'ITAgent' || role === 'ITAdmin';
-  });
+  readonly isITAdmin = computed(() => this.auth.currentUser()?.role === 'ITAdmin');
+  readonly isITAgent = computed(() => this.auth.currentUser()?.role === 'ITAgent');
   readonly nextStatus = computed(() => this.getNextStatus(this.selectedTicket()?.status ?? null));
 
   readonly filterForm = this.formBuilder.nonNullable.group({
@@ -42,7 +47,19 @@ export class TicketListPageComponent implements OnInit {
     priority: ['' as TicketPriority | ''],
   });
 
+  readonly assignmentForm = this.formBuilder.nonNullable.group({
+    assignedToUserId: [''],
+  });
+
+  readonly commentForm = this.formBuilder.nonNullable.group({
+    content: [''],
+  });
+
   ngOnInit(): void {
+    if (this.isITAdmin()) {
+      this.loadAssignableAgents();
+    }
+
     this.loadTickets();
   }
 
@@ -59,6 +76,8 @@ export class TicketListPageComponent implements OnInit {
   selectTicket(ticket: TicketSummary): void {
     this.selectedTicketId.set(ticket.id);
     this.selectedTicket.set(null);
+    this.comments.set([]);
+    this.activities.set([]);
     this.errorMessage.set(null);
     this.statusMessage.set(null);
     this.isLoadingDetail.set(true);
@@ -66,7 +85,11 @@ export class TicketListPageComponent implements OnInit {
     this.ticketService.getTicket(ticket.id).pipe(
       finalize(() => this.isLoadingDetail.set(false)),
     ).subscribe({
-      next: (detail) => this.selectedTicket.set(detail),
+      next: (detail) => {
+        this.selectedTicket.set(detail);
+        this.syncAssignmentForm(detail);
+        this.loadTicketThreads(detail.id);
+      },
       error: () => this.errorMessage.set('Could not load ticket detail.'),
     });
   }
@@ -86,25 +109,50 @@ export class TicketListPageComponent implements OnInit {
       finalize(() => this.isUpdatingStatus.set(false)),
     ).subscribe({
       next: (updatedTicket) => {
-        this.selectedTicket.set(updatedTicket);
+        this.applyUpdatedTicket(updatedTicket);
+        this.loadActivities(updatedTicket.id);
         this.statusMessage.set(`Status updated to ${updatedTicket.status}.`);
-        this.tickets.update((current) => current.map((item) =>
-          item.id === updatedTicket.id ? this.toSummary(updatedTicket) : item,
-        ));
       },
-      error: (error) => {
-        if (error?.status === 409) {
-          this.errorMessage.set('This status transition is not allowed.');
-          return;
-        }
+      error: (error) => this.setTicketMutationError(error, 'Could not update ticket status.'),
+    });
+  }
 
-        if (error?.status === 403) {
-          this.errorMessage.set('You do not have permission to update this ticket.');
-          return;
-        }
+  assignToSelf(ticket: TicketDetail): void {
+    const user = this.auth.currentUser();
+    if (!user || !this.canAssignToSelf(ticket)) {
+      return;
+    }
 
-        this.errorMessage.set('Could not update ticket status.');
+    this.updateAssignment(ticket, user.id);
+  }
+
+  assignSelectedAgent(ticket: TicketDetail): void {
+    const assignedToUserId = this.assignmentForm.getRawValue().assignedToUserId;
+    if (!assignedToUserId || assignedToUserId === ticket.assignedTo?.id) {
+      return;
+    }
+
+    this.updateAssignment(ticket, assignedToUserId);
+  }
+
+  postComment(ticket: TicketDetail): void {
+    const content = this.commentForm.getRawValue().content.trim();
+    if (!content || this.isPostingComment()) {
+      return;
+    }
+
+    this.errorMessage.set(null);
+    this.statusMessage.set(null);
+    this.isPostingComment.set(true);
+
+    this.ticketService.createComment(ticket.id, { content }).pipe(
+      finalize(() => this.isPostingComment.set(false)),
+    ).subscribe({
+      next: (comment) => {
+        this.comments.update((current) => [...current, comment]);
+        this.commentForm.reset({ content: '' });
       },
+      error: (error) => this.setTicketMutationError(error, 'Could not post comment.'),
     });
   }
 
@@ -118,6 +166,56 @@ export class TicketListPageComponent implements OnInit {
 
   canOpenConversation(ticket: TicketDetail): boolean {
     return this.auth.currentUser()?.id === ticket.createdBy.id;
+  }
+
+  canAssignToSelf(ticket: TicketDetail): boolean {
+    return this.isITAgent() && ticket.assignedTo === null;
+  }
+
+  canUpdateTicketStatus(ticket: TicketDetail): boolean {
+    const user = this.auth.currentUser();
+    return this.isITAdmin() || (this.isITAgent() && ticket.assignedTo?.id === user?.id);
+  }
+
+  activityText(activity: TicketActivity): string {
+    if (activity.action === 'TicketCreated') {
+      return 'created this ticket';
+    }
+
+    if (activity.action === 'Assigned') {
+      return `assigned ticket from ${activity.oldValue ?? 'Unassigned'} to ${activity.newValue ?? 'Unassigned'}`;
+    }
+
+    if (activity.action === 'StatusChanged') {
+      return `changed status from ${activity.oldValue ?? '-'} to ${activity.newValue ?? '-'}`;
+    }
+
+    return activity.action;
+  }
+
+  private updateAssignment(ticket: TicketDetail, assignedToUserId: string): void {
+    if (this.isUpdatingAssignment()) {
+      return;
+    }
+
+    this.errorMessage.set(null);
+    this.statusMessage.set(null);
+    this.isUpdatingAssignment.set(true);
+    this.syncAssignmentControlState();
+
+    this.ticketService.updateAssignment(ticket.id, { assignedToUserId }).pipe(
+      finalize(() => {
+        this.isUpdatingAssignment.set(false);
+        this.syncAssignmentControlState();
+      }),
+    ).subscribe({
+      next: (updatedTicket) => {
+        this.applyUpdatedTicket(updatedTicket);
+        this.loadActivities(updatedTicket.id);
+        this.statusMessage.set(`Assigned to ${updatedTicket.assignedTo?.username ?? 'agent'}.`);
+      },
+      error: (error) => this.setTicketMutationError(error, 'Could not update ticket assignment.'),
+    });
   }
 
   private loadTickets(): void {
@@ -143,6 +241,8 @@ export class TicketListPageComponent implements OnInit {
         if (!selectedStillVisible) {
           this.selectedTicketId.set(null);
           this.selectedTicket.set(null);
+          this.comments.set([]);
+          this.activities.set([]);
         }
 
         if (!this.selectedTicketId() && response.items.length > 0) {
@@ -150,6 +250,45 @@ export class TicketListPageComponent implements OnInit {
         }
       },
       error: () => this.errorMessage.set('Could not load tickets.'),
+    });
+  }
+
+  private loadAssignableAgents(): void {
+    this.isLoadingAgents.set(true);
+    this.syncAssignmentControlState();
+
+    this.ticketService.listAgents().pipe(
+      finalize(() => {
+        this.isLoadingAgents.set(false);
+        this.syncAssignmentControlState();
+      }),
+    ).subscribe({
+      next: (agents) => this.assignableAgents.set(agents),
+      error: () => this.errorMessage.set('Could not load assignable agents.'),
+    });
+  }
+
+  private loadTicketThreads(ticketId: string): void {
+    this.isLoadingThreads.set(true);
+
+    forkJoin({
+      comments: this.ticketService.listComments(ticketId),
+      activities: this.ticketService.listActivities(ticketId),
+    }).pipe(
+      finalize(() => this.isLoadingThreads.set(false)),
+    ).subscribe({
+      next: ({ comments, activities }) => {
+        this.comments.set(comments);
+        this.activities.set(activities);
+      },
+      error: () => this.errorMessage.set('Could not load ticket comments or activity.'),
+    });
+  }
+
+  private loadActivities(ticketId: string): void {
+    this.ticketService.listActivities(ticketId).subscribe({
+      next: (activities) => this.activities.set(activities),
+      error: () => this.errorMessage.set('Could not load ticket activity.'),
     });
   }
 
@@ -164,6 +303,53 @@ export class TicketListPageComponent implements OnInit {
       default:
         return null;
     }
+  }
+
+  private applyUpdatedTicket(ticket: TicketDetail): void {
+    this.selectedTicket.set(ticket);
+    this.syncAssignmentForm(ticket);
+    this.tickets.update((current) => current.map((item) =>
+      item.id === ticket.id ? this.toSummary(ticket) : item,
+    ));
+  }
+
+  private syncAssignmentForm(ticket: TicketDetail): void {
+    this.assignmentForm.patchValue({ assignedToUserId: ticket.assignedTo?.id ?? '' });
+    this.syncAssignmentControlState();
+  }
+
+  private syncAssignmentControlState(): void {
+    const control = this.assignmentForm.controls.assignedToUserId;
+    if (this.isLoadingAgents() || this.isUpdatingAssignment()) {
+      control.disable({ emitEvent: false });
+      return;
+    }
+
+    control.enable({ emitEvent: false });
+  }
+
+  private setTicketMutationError(error: { status?: number } | null | undefined, fallback: string): void {
+    if (error?.status === 400) {
+      this.errorMessage.set('The requested ticket update is invalid.');
+      return;
+    }
+
+    if (error?.status === 403) {
+      this.errorMessage.set('You do not have permission to update this ticket.');
+      return;
+    }
+
+    if (error?.status === 404) {
+      this.errorMessage.set('Ticket or assignee was not found.');
+      return;
+    }
+
+    if (error?.status === 409) {
+      this.errorMessage.set('This status transition is not allowed.');
+      return;
+    }
+
+    this.errorMessage.set(fallback);
   }
 
   private toSummary(ticket: TicketDetail): TicketSummary {

@@ -42,3 +42,28 @@ export interface TicketListFilters {
 export interface UpdateTicketStatusRequest {
   status: TicketStatus;
 }
+export interface UpdateTicketAssignmentRequest {
+  assignedToUserId: string;
+}
+export interface CreateTicketCommentRequest {
+  content: string;
+}
+
+export interface TicketComment {
+  id: string;
+  ticketId: string;
+  author: UserRef;
+  content: string;
+  createdAt: string;
+}
+
+export interface TicketActivity {
+  id: string;
+  ticketId: string;
+  actor: UserRef;
+  action: string;
+  field: string | null;
+  oldValue: string | null;
+  newValue: string | null;
+  createdAt: string;
+}

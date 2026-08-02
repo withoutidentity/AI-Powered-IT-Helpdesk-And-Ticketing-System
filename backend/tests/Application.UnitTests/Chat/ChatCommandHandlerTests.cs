@@ -146,6 +146,7 @@ public sealed class ChatCommandHandlerTests
             conversations,
             messages,
             tickets,
+            new FakeTicketActivityRepository(),
             unitOfWork);
 
         var result = await handler.Handle(
@@ -175,6 +176,7 @@ public sealed class ChatCommandHandlerTests
             conversations,
             new FakeMessageRepository(),
             new FakeTicketRepository(),
+            new FakeTicketActivityRepository(),
             new FakeUnitOfWork());
 
         var result = await handler.Handle(new CreateTicketFromMessageCommand(conversation.Id, Guid.NewGuid(), null, null, null), CancellationToken.None);
@@ -198,6 +200,7 @@ public sealed class ChatCommandHandlerTests
             conversations,
             messages,
             new FakeTicketRepository(),
+            new FakeTicketActivityRepository(),
             new FakeUnitOfWork());
 
         var result = await handler.Handle(new CreateTicketFromMessageCommand(conversation.Id, message.Id, null, null, null), CancellationToken.None);
@@ -223,6 +226,7 @@ public sealed class ChatCommandHandlerTests
             conversations,
             messages,
             tickets,
+            new FakeTicketActivityRepository(),
             new FakeUnitOfWork());
 
         var result = await handler.Handle(new CreateTicketFromMessageCommand(conversation.Id, message.Id, null, null, null), CancellationToken.None);
@@ -333,6 +337,23 @@ public sealed class ChatCommandHandlerTests
         public Task AddAsync(Ticket ticket, CancellationToken cancellationToken)
         {
             Items.Add(ticket);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeTicketActivityRepository : ITicketActivityRepository
+    {
+        public List<TicketActivity> Items { get; } = new();
+
+        public Task<IReadOnlyList<TicketActivity>> ListByTicketIdAsync(Guid ticketId, CancellationToken cancellationToken)
+        {
+            IReadOnlyList<TicketActivity> result = Items.Where(activity => activity.TicketId == ticketId).ToList();
+            return Task.FromResult(result);
+        }
+
+        public Task AddAsync(TicketActivity activity, CancellationToken cancellationToken)
+        {
+            Items.Add(activity);
             return Task.CompletedTask;
         }
     }

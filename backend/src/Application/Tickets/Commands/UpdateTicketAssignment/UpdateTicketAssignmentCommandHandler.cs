@@ -5,9 +5,9 @@ using Domain.Entities;
 using Domain.Enums;
 using MediatR;
 
-namespace Application.Tickets.Commands.UpdateTicketStatus;
+namespace Application.Tickets.Commands.UpdateTicketAssignment;
 
-public sealed class UpdateTicketStatusCommandHandler : IRequestHandler<UpdateTicketStatusCommand, Result<TicketDetailDto>>
+public sealed class UpdateTicketAssignmentCommandHandler : IRequestHandler<UpdateTicketAssignmentCommand, Result<TicketDetailDto>>
 {
     private readonly ICurrentUserService _currentUser;
     private readonly ITicketRepository _tickets;
@@ -15,7 +15,7 @@ public sealed class UpdateTicketStatusCommandHandler : IRequestHandler<UpdateTic
     private readonly ITicketActivityRepository _activities;
     private readonly IUnitOfWork _unitOfWork;
 
-    public UpdateTicketStatusCommandHandler(
+    public UpdateTicketAssignmentCommandHandler(
         ICurrentUserService currentUser,
         ITicketRepository tickets,
         IUserRepository users,
@@ -29,7 +29,7 @@ public sealed class UpdateTicketStatusCommandHandler : IRequestHandler<UpdateTic
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<Result<TicketDetailDto>> Handle(UpdateTicketStatusCommand request, CancellationToken cancellationToken)
+    public async Task<Result<TicketDetailDto>> Handle(UpdateTicketAssignmentCommand request, CancellationToken cancellationToken)
     {
         var ticket = await _tickets.GetByIdAsync(request.TicketId, cancellationToken);
         if (ticket is null)
@@ -37,27 +37,34 @@ public sealed class UpdateTicketStatusCommandHandler : IRequestHandler<UpdateTic
             return Result<TicketDetailDto>.Failure("TicketNotFound", "Ticket was not found.");
         }
 
-        if (!CanUpdate(ticket))
+        if (!CanAssign(ticket, request.AssignedToUserId))
         {
-            return Result<TicketDetailDto>.Failure("Forbidden", "You do not have permission to update this ticket.");
+            return Result<TicketDetailDto>.Failure("Forbidden", "You do not have permission to assign this ticket.");
         }
 
-        var oldStatus = ticket.Status;
-        var targetStatus = Enum.Parse<TicketStatus>(request.Status, ignoreCase: true);
+        var assignee = await _users.GetByIdAsync(request.AssignedToUserId, cancellationToken);
+        if (assignee is null)
+        {
+            return Result<TicketDetailDto>.Failure("UserNotFound", "Assigned user was not found.");
+        }
+
+        if (assignee.Role != UserRole.ITAgent)
+        {
+            return Result<TicketDetailDto>.Failure("InvalidAssignee", "Tickets can only be assigned to IT agents.");
+        }
+
+        var oldAssignee = ticket.AssignedTo;
+        var oldAssigneeUser = oldAssignee is null ? null : await _users.GetByIdAsync(oldAssignee.Value, cancellationToken);
         var updatedAt = DateTimeOffset.UtcNow;
-        if (!ticket.UpdateStatus(targetStatus, updatedAt))
-        {
-            return Result<TicketDetailDto>.Failure("InvalidStatusTransition", $"Cannot transition ticket from {ticket.Status} to {targetStatus}.");
-        }
-
+        ticket.AssignTo(assignee.Id, updatedAt);
         await _activities.AddAsync(TicketActivity.Create(
             ticket.Id,
             _currentUser.UserId,
-            "StatusChanged",
+            "Assigned",
             updatedAt,
-            "status",
-            oldStatus.ToString(),
-            targetStatus.ToString()), cancellationToken);
+            "assignedTo",
+            oldAssigneeUser?.Username,
+            assignee.Username), cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -65,12 +72,13 @@ public sealed class UpdateTicketStatusCommandHandler : IRequestHandler<UpdateTic
         return Result<TicketDetailDto>.Success(ToDetailDto(ticket, usersById));
     }
 
-    private bool CanUpdate(Ticket ticket)
+    private bool CanAssign(Ticket ticket, Guid assignedToUserId)
     {
         return _currentUser.Role switch
         {
             UserRole.ITAdmin => true,
-            UserRole.ITAgent => ticket.AssignedTo == _currentUser.UserId,
+            UserRole.ITAgent => assignedToUserId == _currentUser.UserId
+                && (ticket.AssignedTo is null || ticket.AssignedTo == _currentUser.UserId),
             _ => false
         };
     }

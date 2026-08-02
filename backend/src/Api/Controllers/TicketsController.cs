@@ -1,4 +1,8 @@
+using Application.Tickets.Commands.CreateTicketComment;
+using Application.Tickets.Commands.UpdateTicketAssignment;
 using Application.Tickets.Commands.UpdateTicketStatus;
+using Application.Tickets.Queries.GetTicketActivities;
+using Application.Tickets.Queries.GetTicketComments;
 using Application.Tickets.Queries.GetTicketDetail;
 using Application.Tickets.Queries.GetTickets;
 using MediatR;
@@ -77,6 +81,78 @@ public sealed class TicketsController : ControllerBase
         return Ok(result.Value);
     }
 
+    [HttpPatch("{ticketId:guid}/assignment")]
+    public async Task<IActionResult> UpdateTicketAssignment(Guid ticketId, UpdateTicketAssignmentRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new UpdateTicketAssignmentCommand(ticketId, request.AssignedToUserId), cancellationToken);
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                "TicketNotFound" or "UserNotFound" => NotFoundProblem(result.ErrorMessage!),
+                "Forbidden" => ForbiddenProblem(result.ErrorMessage!),
+                "InvalidAssignee" or "ValidationFailed" => ValidationProblem(result.ErrorMessage!),
+                _ => BadRequestProblem(result.ErrorMessage!)
+            };
+        }
+
+        return Ok(result.Value);
+    }
+
+    [HttpGet("{ticketId:guid}/comments")]
+    public async Task<IActionResult> GetTicketComments(Guid ticketId, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new GetTicketCommentsQuery(ticketId), cancellationToken);
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                "TicketNotFound" => NotFoundProblem(result.ErrorMessage!),
+                "Forbidden" => ForbiddenProblem(result.ErrorMessage!),
+                "ValidationFailed" => ValidationProblem(result.ErrorMessage!),
+                _ => BadRequestProblem(result.ErrorMessage!)
+            };
+        }
+
+        return Ok(result.Value);
+    }
+
+    [HttpPost("{ticketId:guid}/comments")]
+    public async Task<IActionResult> CreateTicketComment(Guid ticketId, CreateTicketCommentRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new CreateTicketCommentCommand(ticketId, request.Content), cancellationToken);
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                "TicketNotFound" => NotFoundProblem(result.ErrorMessage!),
+                "Forbidden" => ForbiddenProblem(result.ErrorMessage!),
+                "ValidationFailed" => ValidationProblem(result.ErrorMessage!),
+                _ => BadRequestProblem(result.ErrorMessage!)
+            };
+        }
+
+        return CreatedAtAction(nameof(GetTicketComments), new { ticketId }, result.Value);
+    }
+
+    [HttpGet("{ticketId:guid}/activities")]
+    public async Task<IActionResult> GetTicketActivities(Guid ticketId, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new GetTicketActivitiesQuery(ticketId), cancellationToken);
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                "TicketNotFound" => NotFoundProblem(result.ErrorMessage!),
+                "Forbidden" => ForbiddenProblem(result.ErrorMessage!),
+                "ValidationFailed" => ValidationProblem(result.ErrorMessage!),
+                _ => BadRequestProblem(result.ErrorMessage!)
+            };
+        }
+
+        return Ok(result.Value);
+    }
+
     private IActionResult BadRequestProblem(string detail)
     {
         return Problem(title: "Bad request", detail: detail, statusCode: StatusCodes.Status400BadRequest);
@@ -103,4 +179,8 @@ public sealed class TicketsController : ControllerBase
     }
 }
 
+public sealed record CreateTicketCommentRequest(string Content);
+
 public sealed record UpdateTicketStatusRequest(string Status);
+
+public sealed record UpdateTicketAssignmentRequest(Guid AssignedToUserId);
