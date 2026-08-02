@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize, forkJoin } from 'rxjs';
@@ -14,6 +14,8 @@ import { TicketService } from '../data-access/ticket.service';
   styleUrl: './ticket-list-page.component.scss',
 })
 export class TicketListPageComponent implements OnInit {
+  @ViewChild('commentList') private commentList?: ElementRef<HTMLElement>;
+
   private readonly ticketService = inject(TicketService);
   private readonly formBuilder = inject(FormBuilder);
   private readonly auth = inject(AuthService);
@@ -32,6 +34,7 @@ export class TicketListPageComponent implements OnInit {
   readonly isUpdatingAssignment = signal(false);
   readonly isPostingComment = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly threadErrorMessage = signal<string | null>(null);
   readonly statusMessage = signal<string | null>(null);
   readonly totalCount = signal(0);
   readonly page = signal(1);
@@ -79,6 +82,7 @@ export class TicketListPageComponent implements OnInit {
     this.comments.set([]);
     this.activities.set([]);
     this.errorMessage.set(null);
+    this.threadErrorMessage.set(null);
     this.statusMessage.set(null);
     this.isLoadingDetail.set(true);
 
@@ -141,7 +145,7 @@ export class TicketListPageComponent implements OnInit {
       return;
     }
 
-    this.errorMessage.set(null);
+    this.threadErrorMessage.set(null);
     this.statusMessage.set(null);
     this.isPostingComment.set(true);
 
@@ -151,8 +155,9 @@ export class TicketListPageComponent implements OnInit {
       next: (comment) => {
         this.comments.update((current) => [...current, comment]);
         this.commentForm.reset({ content: '' });
+        this.scrollCommentsToBottom();
       },
-      error: (error) => this.setTicketMutationError(error, 'Could not post comment.'),
+      error: (error) => this.setThreadMutationError(error, 'Could not post comment.'),
     });
   }
 
@@ -243,6 +248,7 @@ export class TicketListPageComponent implements OnInit {
           this.selectedTicket.set(null);
           this.comments.set([]);
           this.activities.set([]);
+          this.threadErrorMessage.set(null);
         }
 
         if (!this.selectedTicketId() && response.items.length > 0) {
@@ -269,6 +275,7 @@ export class TicketListPageComponent implements OnInit {
   }
 
   private loadTicketThreads(ticketId: string): void {
+    this.threadErrorMessage.set(null);
     this.isLoadingThreads.set(true);
 
     forkJoin({
@@ -281,14 +288,14 @@ export class TicketListPageComponent implements OnInit {
         this.comments.set(comments);
         this.activities.set(activities);
       },
-      error: () => this.errorMessage.set('Could not load ticket comments or activity.'),
+      error: () => this.threadErrorMessage.set('Could not load ticket comments or activity.'),
     });
   }
 
   private loadActivities(ticketId: string): void {
     this.ticketService.listActivities(ticketId).subscribe({
       next: (activities) => this.activities.set(activities),
-      error: () => this.errorMessage.set('Could not load ticket activity.'),
+      error: () => this.threadErrorMessage.set('Could not refresh ticket activity.'),
     });
   }
 
@@ -326,6 +333,29 @@ export class TicketListPageComponent implements OnInit {
     }
 
     control.enable({ emitEvent: false });
+  }
+
+  private scrollCommentsToBottom(): void {
+    setTimeout(() => {
+      const element = this.commentList?.nativeElement;
+      if (element) {
+        element.scrollTop = element.scrollHeight;
+      }
+    });
+  }
+
+  private setThreadMutationError(error: { status?: number } | null | undefined, fallback: string): void {
+    if (error?.status === 403) {
+      this.threadErrorMessage.set('You do not have permission to comment on this ticket.');
+      return;
+    }
+
+    if (error?.status === 404) {
+      this.threadErrorMessage.set('Ticket was not found.');
+      return;
+    }
+
+    this.threadErrorMessage.set(fallback);
   }
 
   private setTicketMutationError(error: { status?: number } | null | undefined, fallback: string): void {

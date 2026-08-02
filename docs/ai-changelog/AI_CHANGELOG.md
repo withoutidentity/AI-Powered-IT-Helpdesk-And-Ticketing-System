@@ -1,3 +1,23 @@
+## [2026-08-02] Polish ticket comments and permissions
+
+**Prompt/task summary:** Strengthen ticket comment permission coverage and polish ticket detail comments/activity UX after the workflow slice.
+
+**Files changed:**
+- `backend/tests/Application.UnitTests/Tickets/TicketCommentCommandHandlerTests.cs`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.html`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added unit tests for employee, IT agent, and IT admin comment permissions. The ticket detail page now keeps comment/activity loading and mutation errors separate from the main ticket error, and it scrolls the comments list to the newest comment after posting.
+
+**Why this approach:** The backend authorization rule already existed in the comment command handler, so adding focused unit coverage was lower risk than changing production policy. On the frontend, thread-specific errors avoid replacing the whole ticket detail state when only comments/activity fail.
+
+**Alternatives considered:** Logging every comment as a ticket activity was considered, but left out for now so the activity feed stays focused on workflow events: ticket creation, assignment, and status changes.
+
+**Follow-ups / risks:** If comment volume grows, the comments endpoint should add pagination rather than loading the full thread.
+
+**Reviewed by human:** ?
 ## [2026-08-02] Fix ticket thread route wiring
 
 **Prompt/task summary:** Fix 404s from ticket comments/activity requests and remove the Angular reactive-form disabled warning on the ticket assignment dropdown.

@@ -326,6 +326,15 @@ time,
   padding-top: 0;
 }
 
+.thread-error {
+  border-radius: 6px;
+  background: #fff1f0;
+  color: #a1281f;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
 .thread-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -357,6 +366,14 @@ time,
 .thread-list {
   display: grid;
   gap: 10px;
+}
+
+.scrollable-thread-list {
+  max-height: 320px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
 }
 
 .thread-item {

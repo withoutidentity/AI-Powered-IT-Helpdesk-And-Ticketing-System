@@ -148,6 +148,9 @@
         </div>
       </section>
       <section class="detail-section thread-section">
+        @if (threadErrorMessage()) {
+          <p class="thread-error">{{ threadErrorMessage() }}</p>
+        }
         <div class="thread-grid">
           <div class="thread-panel">
             <p class="section-label">Comments</p>
@@ -163,7 +166,7 @@
             } @else if (comments().length === 0) {
               <p class="muted inline-muted">No comments yet.</p>
             } @else {
-              <div class="thread-list">
+              <div class="thread-list scrollable-thread-list" #commentList>
                 @for (comment of comments(); track comment.id) {
                   <article class="thread-item">
                     <div>
