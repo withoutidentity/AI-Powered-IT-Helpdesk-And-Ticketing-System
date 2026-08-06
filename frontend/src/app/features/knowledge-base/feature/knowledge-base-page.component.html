@@ -1,0 +1,136 @@
+<section class="kb-page">
+  @if (!canViewKnowledgeBase()) {
+    <section class="access-panel">
+      <p class="eyebrow">Knowledge base</p>
+      <h2>Restricted</h2>
+      <p>Only IT agents and IT admins can view knowledge-base documents.</p>
+    </section>
+  } @else {
+    <aside class="document-list-panel" aria-label="Knowledge base documents">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Knowledge base</p>
+          <h2>Documents</h2>
+        </div>
+        <span class="count">{{ totalCount() }}</span>
+      </div>
+
+      @if (isITAdmin()) {
+        <form [formGroup]="createForm" (ngSubmit)="createDocument()" class="document-form">
+          <label>
+            <span>Title</span>
+            <input type="text" formControlName="title" maxlength="200" placeholder="Office Wi-Fi Guide" />
+          </label>
+          <label>
+            <span>Source file</span>
+            <input type="text" formControlName="sourceFile" maxlength="500" placeholder="office-wifi.md" />
+          </label>
+          <label>
+            <span>Source type</span>
+            <select formControlName="sourceType">
+              <option value="text/markdown">text/markdown</option>
+              <option value="text/plain">text/plain</option>
+              <option value="application/pdf">application/pdf</option>
+            </select>
+          </label>
+          <label>
+            <span>Content</span>
+            <textarea formControlName="content" rows="8" maxlength="500000" placeholder="# Office Wi-Fi"></textarea>
+          </label>
+          <button type="submit" [disabled]="isCreating()">
+            {{ isCreating() ? 'Adding...' : 'Add document' }}
+          </button>
+        </form>
+      }
+
+      @if (createMessage()) {
+        <p class="status-message">{{ createMessage() }}</p>
+      }
+
+      @if (errorMessage()) {
+        <p class="error-message">{{ errorMessage() }}</p>
+      }
+
+      @if (isLoadingDocuments()) {
+        <p class="muted">Loading documents...</p>
+      } @else if (!hasDocuments()) {
+        <p class="muted">No documents yet.</p>
+      } @else {
+        <div class="document-items">
+          @for (document of documents(); track document.id) {
+            <button type="button" class="document-item" [class.active]="isSelected(document)" (click)="selectDocument(document)">
+              <span class="document-title">{{ document.title }}</span>
+              <span class="document-meta">
+                <strong [class]="'status ' + document.status.toLowerCase()">{{ statusLabel(document.status) }}</strong>
+                <span>{{ document.chunkCount }} chunk{{ document.chunkCount === 1 ? '' : 's' }}</span>
+              </span>
+              <time>{{ document.uploadedAt | date: 'short' }}</time>
+            </button>
+          }
+        </div>
+      }
+    </aside>
+
+    <section class="document-detail-panel" aria-label="Knowledge base document detail">
+      @if (isLoadingDetail()) {
+        <p class="muted detail-muted">Loading document detail...</p>
+      } @else if (selectedDocument(); as document) {
+        <div class="detail-heading">
+          <div>
+            <p class="eyebrow">{{ document.sourceType }}</p>
+            <h2>{{ document.title }}</h2>
+          </div>
+          <span [class]="'status-pill ' + document.status.toLowerCase()">{{ document.status }}</span>
+        </div>
+
+        <div class="detail-grid">
+          <div>
+            <span>Source file</span>
+            <strong>{{ document.sourceFile }}</strong>
+          </div>
+          <div>
+            <span>Chunks</span>
+            <strong>{{ document.chunks.length }}</strong>
+          </div>
+          <div>
+            <span>Uploaded</span>
+            <strong>{{ document.uploadedAt | date: 'medium' }}</strong>
+          </div>
+          <div>
+            <span>Updated</span>
+            <strong>{{ document.updatedAt | date: 'medium' }}</strong>
+          </div>
+        </div>
+
+        <section class="hash-section">
+          <span>Content hash</span>
+          <code>{{ document.contentHash }}</code>
+        </section>
+
+        <section class="chunk-section">
+          <p class="section-label">Chunks</p>
+          @if (document.chunks.length === 0) {
+            <p class="muted inline-muted">No chunks stored.</p>
+          } @else {
+            <div class="chunk-list">
+              @for (chunk of document.chunks; track chunk.id) {
+                <article class="chunk-item">
+                  <div class="chunk-heading">
+                    <strong>#{{ chunk.chunkIndex }}</strong>
+                    <span>{{ chunk.tokenCount ?? 0 }} tokens</span>
+                  </div>
+                  <pre>{{ chunk.content }}</pre>
+                </article>
+              }
+            </div>
+          }
+        </section>
+      } @else {
+        <div class="empty-detail">
+          <h2>Select a document</h2>
+          <p>Document detail and chunks will appear here.</p>
+        </div>
+      }
+    </section>
+  }
+</section>

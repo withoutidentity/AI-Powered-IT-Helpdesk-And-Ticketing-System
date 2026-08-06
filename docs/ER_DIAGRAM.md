@@ -98,8 +98,12 @@ erDiagram
         uuid id PK
         string title
         string source_file
+        string source_type
+        string content_hash
         string status "Processing | Ready | Failed"
+        string failure_reason "nullable"
         timestamptz uploaded_at
+        timestamptz updated_at
     }
 
     DOCUMENT_CHUNKS {
@@ -107,7 +111,11 @@ erDiagram
         uuid document_id FK
         int chunk_index
         text content
-        vector embedding "e.g. vector(768)"
+        string content_hash
+        int token_count "nullable"
+        string embedding_model "nullable metadata"
+        int embedding_dimensions "nullable metadata"
+        timestamptz created_at
     }
 
     MESSAGE_SOURCES {
@@ -156,15 +164,21 @@ erDiagram
 - `actor_id` stores the user who performed the change. `old_value` and `new_value` store compact string snapshots so the log remains understandable even if the ticket changes again later.
 
 ### `knowledge_documents` / `document_chunks`
-- `embedding` uses `pgvector`'s `vector(n)` type, where `n` matches the chosen embedding
-  model's output dimensionality (e.g. 768 for `nomic-embed-text-v1_5` — **confirm the
-  exact dimension against the model actually configured** before writing the migration,
-  since getting this wrong means re-embedding everything).
-- Index: `CREATE INDEX ON document_chunks USING hnsw (embedding vector_cosine_ops);`
+- Current implemented foundation stores documents and ordered text chunks without the
+  actual vector column yet. `embedding_model` and `embedding_dimensions` are nullable
+  metadata placeholders so later RAG slices can record which model produced a chunk's
+  embedding.
+- The next vector-search slice should add the pgvector EF mapping/package and a nullable
+  `embedding vector(n)` column once the embedding model and exact dimension are confirmed.
+  Getting `n` wrong means re-embedding every chunk, so that decision is intentionally
+  deferred until the model is verified.
+- Future vector index: `CREATE INDEX ON document_chunks USING hnsw (embedding vector_cosine_ops);`
   (or `ivfflat` depending on the pgvector version available) for fast approximate
   nearest-neighbor search.
-- `chunk_index` preserves order within a document, useful for reconstructing context or
-  debugging retrieval quality.
+- `chunk_index` preserves order within a document and is unique per document, useful for
+  reconstructing context or debugging retrieval quality. Pasted text is chunked server-side
+  by Markdown headings first, then by long-section word windows with overlap.
+- `content_hash` supports idempotent ingestion/re-indexing and duplicate detection.
 
 ### `message_sources`
 - Join table so a single assistant message can cite multiple chunks (and, in principle,
@@ -201,3 +215,4 @@ All schema changes go through **EF Core Migrations** (`dotnet ef migrations add 
 generated from `Infrastructure/Persistence/Configurations/*` Fluent API configs — never
 hand-edited SQL against a running database, so the migration history stays the single
 source of truth for schema evolution.
+

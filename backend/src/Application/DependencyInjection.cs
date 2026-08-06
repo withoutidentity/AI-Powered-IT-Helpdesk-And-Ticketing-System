@@ -1,4 +1,6 @@
-﻿using Application.Common.Behaviors;
+using Application.Common.Behaviors;
+using Application.Common.Interfaces;
+using Application.KnowledgeBase.Services;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +14,7 @@ public static class DependencyInjection
         services.AddMediatR(configuration => configuration.RegisterServicesFromAssembly(typeof(AssemblyReference).Assembly));
         services.AddValidatorsFromAssembly(typeof(AssemblyReference).Assembly);
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+        services.AddSingleton<IKnowledgeDocumentChunker, MarkdownKnowledgeDocumentChunker>();
 
         return services;
     }

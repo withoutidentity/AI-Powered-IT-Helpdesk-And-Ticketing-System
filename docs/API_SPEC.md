@@ -297,47 +297,119 @@ Creates the single ticket for a conversation from a persisted user message in th
 
 ## 4. Knowledge Base (Admin)
 
+> Implementation status: the current backend supports JSON-based document creation and
+> read APIs without embedding/vector search. `POST /kb/documents` splits pasted text
+> into ordered chunks server-side, then marks the document `Ready`. The chunker uses
+> Markdown headings as semantic boundaries first, and splits long sections into word
+> windows with overlap. File upload, PDF extraction, embeddings, and the
+> `embedding vector(n)` column are planned for later KB/RAG slices.
+
 ### `POST /kb/documents`
-Uploads a document for the RAG pipeline. Multipart form upload.
+Creates a knowledge-base document from pasted/admin-supplied text. The backend chunks the full pasted content automatically; admins do not need to paste one topic at a time. This is still a no-embed API and does not parse uploaded files yet.
 
 **Auth required:** `ITAdmin`
-**Content-Type:** `multipart/form-data`
+**Content-Type:** `application/json`
 
-**Request:** form field `file` (PDF/Markdown/plain text, max 10MB)
+**Request**
+```json
+{
+  "title": "Office Wi-Fi Guide",
+  "sourceFile": "office-wifi.md",
+  "sourceType": "text/markdown",
+  "content": "# Office Wi-Fi\nConnect to Office-5G using your company account...\n\n# VPN\nInstall the VPN client and sign in..."
+}
+```
 
-**Response `202 Accepted`** *(processing is async — chunking/embedding happens in a
-background job)*
+**Response `201 Created`**
 ```json
 {
   "id": "d1...",
-  "title": "IT_Manual_v2.pdf",
-  "status": "Processing",
-  "uploadedAt": "2026-07-29T08:00:00Z"
+  "title": "Office Wi-Fi Guide",
+  "sourceFile": "office-wifi.md",
+  "sourceType": "text/markdown",
+  "contentHash": "64-char-sha256",
+  "status": "Ready",
+  "failureReason": null,
+  "uploadedAt": "2026-08-02T08:00:00Z",
+  "updatedAt": "2026-08-02T08:00:00Z",
+  "chunks": [
+    {
+      "id": "ch1...",
+      "documentId": "d1...",
+      "chunkIndex": 0,
+      "content": "# Office Wi-Fi\nConnect to Office-5G using your company account...",
+      "contentHash": "64-char-sha256",
+      "tokenCount": 8,
+      "embeddingModel": null,
+      "embeddingDimensions": null,
+      "createdAt": "2026-08-02T08:00:00Z"
+    },
+    {
+      "id": "ch2...",
+      "documentId": "d1...",
+      "chunkIndex": 1,
+      "content": "# VPN\nInstall the VPN client and sign in...",
+      "contentHash": "64-char-sha256",
+      "tokenCount": 8,
+      "embeddingModel": null,
+      "embeddingDimensions": null,
+      "createdAt": "2026-08-02T08:00:00Z"
+    }
+  ]
 }
 ```
+
+**Errors:** `400` validation, `403` only IT admins can create KB documents
 
 ---
 
 ### `GET /kb/documents`
-**Auth required:** `ITAdmin`
+Lists knowledge-base documents visible to IT staff.
+
+**Auth required:** `ITAgent`, `ITAdmin`
+**Query:** `?page=1&pageSize=20`
 
 **Response `200 OK`**
 ```json
-[
-  {
-    "id": "d1...",
-    "title": "IT_Manual_v2.pdf",
-    "status": "Ready",
-    "chunkCount": 42,
-    "uploadedAt": "2026-07-29T08:00:00Z"
-  }
-]
+{
+  "items": [
+    {
+      "id": "d1...",
+      "title": "Office Wi-Fi Guide",
+      "sourceFile": "office-wifi.md",
+      "sourceType": "text/markdown",
+      "contentHash": "64-char-sha256",
+      "status": "Ready",
+      "failureReason": null,
+      "chunkCount": 2,
+      "uploadedAt": "2026-08-02T08:00:00Z",
+      "updatedAt": "2026-08-02T08:00:00Z"
+    }
+  ],
+  "page": 1,
+  "pageSize": 20,
+  "totalCount": 1,
+  "totalPages": 1
+}
 ```
+
+**Errors:** `400` invalid page/pageSize, `403` employees cannot view the KB admin API
+
+---
+
+### `GET /kb/documents/{documentId}`
+Returns a document plus its currently stored chunks.
+
+**Auth required:** `ITAgent`, `ITAdmin`
+
+**Response `200 OK`** - same shape as the `POST /kb/documents` response.
+
+**Errors:** `403` employees cannot view the KB admin API, `404` document not found
 
 ---
 
 ### `POST /kb/documents/{documentId}/reindex`
-Re-runs chunking + embedding (e.g. after changing the embedding model).
+Re-runs chunking + embedding. Planned for a later RAG slice.
 
 **Auth required:** `ITAdmin`
 **Response:** `202 Accepted`
@@ -345,13 +417,12 @@ Re-runs chunking + embedding (e.g. after changing the embedding model).
 ---
 
 ### `DELETE /kb/documents/{documentId}`
-Removes the document and its chunks.
+Removes the document and its chunks. Planned for a later KB management slice.
 
 **Auth required:** `ITAdmin`
 **Response:** `204 No Content`
 
 ---
-
 ## 5. Tickets
 
 ### `GET /tickets`
@@ -556,6 +627,7 @@ Lists audit activity on a ticket in chronological order. Activity rows are creat
 **Auth required:** No
 **Response `200 OK` / `503 Service Unavailable`** — checks DB connectivity and (optionally,
 non-blocking) Groq API reachability.
+
 
 
 

@@ -1,3 +1,108 @@
+## [2026-08-02] Add server-side knowledge document chunking
+
+**Prompt/task summary:** Explain why KB content uses content hashes, then add a backend chunking service so admins can paste a full document and the server splits it into chunks automatically.
+
+**Files changed:**
+- `backend/src/Application/Common/Interfaces/IKnowledgeDocumentChunker.cs`
+- `backend/src/Application/Common/Models/KnowledgeDocumentChunk.cs`
+- `backend/src/Application/KnowledgeBase/Services/MarkdownKnowledgeDocumentChunker.cs`
+- `backend/src/Application/KnowledgeBase/Commands/CreateKnowledgeDocument/CreateKnowledgeDocumentCommandHandler.cs`
+- `backend/src/Application/DependencyInjection.cs`
+- `backend/tests/Application.UnitTests/KnowledgeBase/KnowledgeDocumentHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ER_DIAGRAM.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added an application-level chunking abstraction and a Markdown-aware implementation. KB document creation now normalizes pasted content, computes a document hash, splits the content into ordered chunks, stores a chunk hash for each chunk, and returns all stored chunks in the create response.
+
+**Why this approach:** Chunking belongs on the server so web UI paste, future file upload, future reindex jobs, and future admin tools all use the same policy. Markdown headings keep topic boundaries intact for RAG, while long-section windows with overlap reduce context loss near chunk boundaries.
+
+**Alternatives considered:** Client-side chunking was rejected because each ingestion source would need to duplicate policy. Keeping one giant chunk was rejected because retrieval quality gets worse and embeddings become expensive/noisy. Exact model-token counting was deferred until the embedding model is finalized.
+
+**Follow-ups / risks:** Add upload extraction for PDF/DOCX/Markdown files, tune chunk size and overlap with real Thai/English KB documents, use tokenizer-aware counts, and add reindex support for old one-chunk documents.
+
+**Reviewed by human:** ?
+
+## [2026-08-02] Add frontend knowledge base page
+
+**Prompt/task summary:** Add a frontend Knowledge Base page where IT admins can paste text to create KB documents and IT agents/admins can view document lists and chunk details.
+
+**Files changed:**
+- `frontend/src/app/app.routes.ts`
+- `frontend/src/app/features/knowledge-base/data-access/knowledge-base.models.ts`
+- `frontend/src/app/features/knowledge-base/data-access/knowledge-base.service.ts`
+- `frontend/src/app/features/knowledge-base/feature/knowledge-base-page.component.ts`
+- `frontend/src/app/features/knowledge-base/feature/knowledge-base-page.component.html`
+- `frontend/src/app/features/knowledge-base/feature/knowledge-base-page.component.scss`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Replaced the Knowledge Base placeholder route with a real page. The page lists KB documents, loads document detail with stored chunks, allows IT admins to create a document from pasted text, and blocks employee UI access with a restricted state.
+
+**Why this approach:** This matches the current backend no-embed API and keeps the UI focused on validating document storage before adding upload parsing, chunk splitting, embeddings, and vector search. The create form stays Admin-only while IT agents can inspect documents for support context.
+
+**Alternatives considered:** Adding file upload was deferred because the backend currently accepts JSON text only. Automatic client-side chunking was also deferred so chunking policy stays server-side and consistent for future ingestion sources.
+
+**Follow-ups / risks:** The backend currently stores pasted content as a single chunk. Add a server-side chunking service next so long documents are split consistently before embedding.
+
+**Reviewed by human:** ?
+## [2026-08-02] Add knowledge base document APIs
+
+**Prompt/task summary:** Add KB document APIs without embedding: list documents, get document detail, and create a document from text with Admin-only create permissions and IT staff read permissions.
+
+**Files changed:**
+- `backend/src/Api/Controllers/KnowledgeBaseController.cs`
+- `backend/src/Application/Common/Interfaces/IKnowledgeDocumentRepository.cs`
+- `backend/src/Application/Common/Interfaces/IDocumentChunkRepository.cs`
+- `backend/src/Application/KnowledgeBase/Models/KnowledgeDocumentSummaryDto.cs`
+- `backend/src/Application/KnowledgeBase/Models/KnowledgeDocumentDetailDto.cs`
+- `backend/src/Application/KnowledgeBase/Models/DocumentChunkDto.cs`
+- `backend/src/Application/KnowledgeBase/Queries/GetKnowledgeDocuments/*`
+- `backend/src/Application/KnowledgeBase/Queries/GetKnowledgeDocumentDetail/*`
+- `backend/src/Application/KnowledgeBase/Commands/CreateKnowledgeDocument/*`
+- `backend/src/Infrastructure/Persistence/Repositories/KnowledgeDocumentRepository.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/DocumentChunkRepository.cs`
+- `backend/src/CompositionRoot/DependencyInjection.cs`
+- `backend/tests/Application.UnitTests/KnowledgeBase/KnowledgeDocumentHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `/api/v1/kb/documents` list/detail/create endpoints. Create accepts JSON text, stores a `Ready` document, and creates one initial chunk without embedding. IT admins can create documents; IT admins and IT agents can read documents; employees are denied by Application-layer authorization.
+
+**Why this approach:** A JSON text endpoint lets the project validate the KB admin flow before file upload, PDF extraction, chunk splitting, and embeddings add more moving parts. Keeping authorization in Application handlers matches the existing Clean Architecture pattern and keeps permissions unit-testable without an HTTP server.
+
+**Alternatives considered:** Multipart upload was deferred because this slice intentionally avoids extraction/parsing. Creating many chunks immediately was deferred until a real chunking policy is implemented and can be tested independently.
+
+**Follow-ups / risks:** Add update/delete/reindex later, then add a dedicated chunking service before embeddings/vector search. The current `tokenCount` is a rough word-count estimate, not model-token accurate.
+
+**Reviewed by human:** ?
+## [2026-08-02] Add knowledge base data model
+
+**Prompt/task summary:** Add the backend Knowledge Base foundation with `knowledge_documents` and `document_chunks`, EF Core migration, tests, and docs.
+
+**Files changed:**
+- `backend/src/Domain/Enums/KnowledgeDocumentStatus.cs`
+- `backend/src/Domain/Entities/KnowledgeDocument.cs`
+- `backend/src/Domain/Entities/DocumentChunk.cs`
+- `backend/src/Infrastructure/Persistence/AppDbContext.cs`
+- `backend/src/Infrastructure/Persistence/Configurations/KnowledgeDocumentConfiguration.cs`
+- `backend/src/Infrastructure/Persistence/Configurations/DocumentChunkConfiguration.cs`
+- `backend/src/Infrastructure/Persistence/Migrations/20260802080646_AddKnowledgeBaseModel.cs`
+- `backend/src/Infrastructure/Persistence/Migrations/20260802080646_AddKnowledgeBaseModel.Designer.cs`
+- `backend/src/Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
+- `backend/tests/Application.UnitTests/Domain/CoreDataModelTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ER_DIAGRAM.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added domain entities and EF mappings for knowledge-base documents and ordered document chunks. Documents track source metadata, content hash, processing status, failure reason, and timestamps. Chunks track ordering, content, content hash, token count, and nullable embedding metadata. Added the EF migration and domain tests for document/chunk creation and status transitions.
+
+**Why this approach:** This keeps the slice focused on the relational foundation needed before ingestion/RAG. The actual pgvector column is deferred because the project has not added pgvector EF mapping support yet and the embedding dimension should be verified against the chosen model before committing `vector(n)` to the schema.
+
+**Alternatives considered:** Adding a `vector(768)` column immediately was considered, but rejected for this slice because the current backend package set does not include explicit pgvector mapping and a guessed dimension would create avoidable re-embedding risk later.
+
+**Follow-ups / risks:** Next KB slices should add CRUD/ingestion APIs, text extraction/chunking, then pgvector package/migration plus vector search once the embedding model dimension is verified.
+
+**Reviewed by human:** ?
 ## [2026-08-02] Polish ticket comments and permissions
 
 **Prompt/task summary:** Strengthen ticket comment permission coverage and polish ticket detail comments/activity UX after the workflow slice.
@@ -4552,6 +4657,7 @@ approach, which is both testable and framework-agnostic.
 revisit whether the transition graph needs an `Admin` override path.
 
 **Reviewed by human:** [ ]
+
 
 
 

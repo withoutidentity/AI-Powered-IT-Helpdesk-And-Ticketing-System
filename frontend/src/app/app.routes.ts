@@ -4,6 +4,7 @@ import { LoginPageComponent } from './features/auth/feature/login-page.component
 import { RegisterPageComponent } from './features/auth/feature/register-page.component';
 import { ChatPageComponent } from './features/chat/feature/chat-page.component';
 import { PlaceholderPageComponent } from './features/dashboard/feature/placeholder-page.component';
+import { KnowledgeBasePageComponent } from './features/knowledge-base/feature/knowledge-base-page.component';
 import { TicketListPageComponent } from './features/tickets/feature/ticket-list-page.component';
 
 export const routes: Routes = [
@@ -37,13 +38,8 @@ export const routes: Routes = [
   },
   {
     path: 'knowledge-base',
-    component: PlaceholderPageComponent,
+    component: KnowledgeBasePageComponent,
     canActivate: [authGuard],
-    data: {
-      eyebrow: 'Knowledge base',
-      title: 'Documents',
-      summary: 'Manage internal support documents that will ground AI answers for employees and IT staff.',
-    },
   },
   {
     path: '**',
