@@ -1,5 +1,6 @@
-using Application;
+﻿using Application;
 using Application.Common.Interfaces;
+using Infrastructure.Ai;
 using Infrastructure.Identity;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Repositories;
@@ -27,6 +28,8 @@ public static class DependencyInjection
         services.AddScoped<ITicketActivityRepository, TicketActivityRepository>();
         services.AddScoped<IKnowledgeDocumentRepository, KnowledgeDocumentRepository>();
         services.AddScoped<IDocumentChunkRepository, DocumentChunkRepository>();
+        services.AddSingleton<HttpClient>();
+        services.AddScoped<IEmbeddingService, GroqEmbeddingService>();
         services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<AppDbContext>());
         services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();

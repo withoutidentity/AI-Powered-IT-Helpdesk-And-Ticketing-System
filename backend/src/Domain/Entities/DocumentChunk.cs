@@ -1,4 +1,4 @@
-namespace Domain.Entities;
+﻿namespace Domain.Entities;
 
 public sealed class DocumentChunk
 {
@@ -39,6 +39,22 @@ public sealed class DocumentChunk
     public string? EmbeddingModel { get; private set; }
     public int? EmbeddingDimensions { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
+
+    public void MarkEmbedded(string embeddingModel, int embeddingDimensions)
+    {
+        if (string.IsNullOrWhiteSpace(embeddingModel))
+        {
+            throw new ArgumentException("Embedding model is required.", nameof(embeddingModel));
+        }
+
+        if (embeddingDimensions <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(embeddingDimensions), "Embedding dimensions must be positive.");
+        }
+
+        EmbeddingModel = embeddingModel.Trim();
+        EmbeddingDimensions = embeddingDimensions;
+    }
 
     public static DocumentChunk Create(
         Guid documentId,

@@ -1,5 +1,7 @@
 ﻿using Application.Common.Interfaces;
+using Application.Common.Models;
 using Application.KnowledgeBase.Commands.CreateKnowledgeDocument;
+using Application.KnowledgeBase.Commands.ReindexKnowledgeDocument;
 using Application.KnowledgeBase.Queries.GetKnowledgeDocumentDetail;
 using Application.KnowledgeBase.Queries.GetKnowledgeDocuments;
 using Application.KnowledgeBase.Services;
@@ -138,6 +140,67 @@ public sealed class KnowledgeDocumentHandlerTests
         unitOfWork.SaveCalls.Should().Be(0);
     }
 
+    [Fact]
+    public async Task ReindexKnowledgeDocument_ITAdmin_EmbedsChunksAndMarksDocumentReady()
+    {
+        var document = CreateReadyDocument("Wi-Fi Guide");
+        var first = DocumentChunk.Create(document.Id, 0, "# Wi-Fi", "hash-1", DateTimeOffset.UtcNow);
+        var second = DocumentChunk.Create(document.Id, 1, "# VPN", "hash-2", DateTimeOffset.UtcNow);
+        var documents = new FakeKnowledgeDocumentRepository(document);
+        var chunks = new FakeDocumentChunkRepository(first, second);
+        var unitOfWork = new FakeUnitOfWork();
+        var handler = new ReindexKnowledgeDocumentCommandHandler(
+            new FakeCurrentUserService(Guid.NewGuid(), UserRole.ITAdmin),
+            documents,
+            chunks,
+            new FakeEmbeddingService(),
+            unitOfWork);
+
+        var result = await handler.Handle(new ReindexKnowledgeDocumentCommand(document.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.EmbeddedChunkCount.Should().Be(2);
+        result.Value.EmbeddingModel.Should().Be("fake-embedding");
+        result.Value.EmbeddingDimensions.Should().Be(3);
+        document.Status.Should().Be(KnowledgeDocumentStatus.Ready);
+        chunks.EmbeddingUpdates.Should().HaveCount(2);
+        chunks.Items.Should().OnlyContain(chunk => chunk.EmbeddingModel == "fake-embedding" && chunk.EmbeddingDimensions == 3);
+        unitOfWork.SaveCalls.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task ReindexKnowledgeDocument_ITAgent_ReturnsForbidden()
+    {
+        var document = CreateReadyDocument("Wi-Fi Guide");
+        var handler = new ReindexKnowledgeDocumentCommandHandler(
+            new FakeCurrentUserService(Guid.NewGuid(), UserRole.ITAgent),
+            new FakeKnowledgeDocumentRepository(document),
+            new FakeDocumentChunkRepository(DocumentChunk.Create(document.Id, 0, "content", "hash", DateTimeOffset.UtcNow)),
+            new FakeEmbeddingService(),
+            new FakeUnitOfWork());
+
+        var result = await handler.Handle(new ReindexKnowledgeDocumentCommand(document.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be("Forbidden");
+    }
+
+    [Fact]
+    public async Task ReindexKnowledgeDocument_MissingDocument_ReturnsNotFound()
+    {
+        var handler = new ReindexKnowledgeDocumentCommandHandler(
+            new FakeCurrentUserService(Guid.NewGuid(), UserRole.ITAdmin),
+            new FakeKnowledgeDocumentRepository(),
+            new FakeDocumentChunkRepository(),
+            new FakeEmbeddingService(),
+            new FakeUnitOfWork());
+
+        var result = await handler.Handle(new ReindexKnowledgeDocumentCommand(Guid.NewGuid()), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be("DocumentNotFound");
+    }
+
     private static KnowledgeDocument CreateReadyDocument(string title)
     {
         var document = KnowledgeDocument.Create(title, title + ".md", "text/markdown", Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow);
@@ -201,6 +264,7 @@ public sealed class KnowledgeDocumentHandlerTests
         }
 
         public List<DocumentChunk> Items { get; } = new();
+        public List<Guid> EmbeddingUpdates { get; } = new();
 
         public Task<IReadOnlyList<DocumentChunk>> ListByDocumentIdAsync(Guid documentId, CancellationToken cancellationToken)
         {
@@ -208,10 +272,37 @@ public sealed class KnowledgeDocumentHandlerTests
             return Task.FromResult(result);
         }
 
+        public Task<IReadOnlyList<DocumentChunk>> SearchSimilarAsync(IReadOnlyList<float> embedding, int limit, CancellationToken cancellationToken)
+        {
+            IReadOnlyList<DocumentChunk> result = Items.Take(limit).ToList();
+            return Task.FromResult(result);
+        }
+
         public Task AddAsync(DocumentChunk chunk, CancellationToken cancellationToken)
         {
             Items.Add(chunk);
             return Task.CompletedTask;
+        }
+
+        public Task UpdateEmbeddingAsync(Guid chunkId, IReadOnlyList<float> embedding, string embeddingModel, int embeddingDimensions, CancellationToken cancellationToken)
+        {
+            var chunk = Items.Single(item => item.Id == chunkId);
+            chunk.MarkEmbedded(embeddingModel, embeddingDimensions);
+            EmbeddingUpdates.Add(chunkId);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class FakeEmbeddingService : IEmbeddingService
+    {
+        public Task<EmbeddingResult> EmbedDocumentAsync(string text, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new EmbeddingResult([0.1f, 0.2f, 0.3f], "fake-embedding", 3));
+        }
+
+        public Task<EmbeddingResult> EmbedQueryAsync(string text, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new EmbeddingResult([0.3f, 0.2f, 0.1f], "fake-embedding", 3));
         }
     }
 

@@ -297,12 +297,13 @@ Creates the single ticket for a conversation from a persisted user message in th
 
 ## 4. Knowledge Base (Admin)
 
-> Implementation status: the current backend supports JSON-based document creation and
-> read APIs without embedding/vector search. `POST /kb/documents` splits pasted text
-> into ordered chunks server-side, then marks the document `Ready`. The chunker uses
-> Markdown headings as semantic boundaries first, and splits long sections into word
-> windows with overlap. File upload, PDF extraction, embeddings, and the
-> `embedding vector(n)` column are planned for later KB/RAG slices.
+> Implementation status: the current backend supports JSON-based document creation,
+> read APIs, server-side chunking, and manual embedding reindexing. `POST /kb/documents`
+> splits pasted text into ordered chunks and stores them without vectors initially.
+> `POST /kb/documents/{documentId}/reindex` embeds each chunk and stores the vectors in
+> PostgreSQL `pgvector` (`document_chunks.embedding vector(768)`). File upload, PDF
+> extraction, automatic background ingestion, and chat-time RAG retrieval are planned for
+> later KB/RAG slices.
 
 ### `POST /kb/documents`
 Creates a knowledge-base document from pasted/admin-supplied text. The backend chunks the full pasted content automatically; admins do not need to paste one topic at a time. This is still a no-embed API and does not parse uploaded files yet.
@@ -409,10 +410,23 @@ Returns a document plus its currently stored chunks.
 ---
 
 ### `POST /kb/documents/{documentId}/reindex`
-Re-runs chunking + embedding. Planned for a later RAG slice.
+Embeds the currently stored chunks for a knowledge-base document and writes the vectors to `document_chunks.embedding`.
 
 **Auth required:** `ITAdmin`
-**Response:** `202 Accepted`
+
+**Response `200 OK`**
+```json
+{
+  "documentId": "d1...",
+  "status": "Ready",
+  "embeddedChunkCount": 2,
+  "embeddingModel": "nomic-embed-text-v1_5",
+  "embeddingDimensions": 768,
+  "updatedAt": "2026-08-11T09:00:00Z"
+}
+```
+
+**Errors:** `400` embedding provider failure or no chunks, `403` only IT admins can reindex KB documents, `404` document not found
 
 ---
 

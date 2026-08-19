@@ -1,3 +1,36 @@
+## [2026-08-11] Add knowledge-base embedding reindex and pgvector storage
+
+**Prompt/task summary:** Continue the next KB/RAG slice by adding embedding storage and reindexing, update docs, and explain where Admin-created KB documents are stored/read from.
+
+**Files changed:**
+- `backend/src/Api/Controllers/KnowledgeBaseController.cs`
+- `backend/src/Api/appsettings.json`
+- `backend/.env.example`
+- `backend/src/Application/Common/Interfaces/IEmbeddingService.cs`
+- `backend/src/Application/Common/Interfaces/IDocumentChunkRepository.cs`
+- `backend/src/Application/Common/Models/EmbeddingResult.cs`
+- `backend/src/Application/KnowledgeBase/Commands/ReindexKnowledgeDocument/*`
+- `backend/src/Application/KnowledgeBase/Models/ReindexKnowledgeDocumentResultDto.cs`
+- `backend/src/CompositionRoot/DependencyInjection.cs`
+- `backend/src/Domain/Entities/DocumentChunk.cs`
+- `backend/src/Infrastructure/Ai/GroqEmbeddingService.cs`
+- `backend/src/Infrastructure/Persistence/Migrations/20260811090000_AddDocumentChunkEmbeddingVector.cs`
+- `backend/src/Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/DocumentChunkRepository.cs`
+- `backend/tests/Application.UnitTests/KnowledgeBase/KnowledgeDocumentHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ER_DIAGRAM.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a manual Admin-only reindex endpoint for KB documents. Reindex loads stored chunks, calls the embedding service for each chunk, writes vectors to PostgreSQL `document_chunks.embedding vector(768)`, records embedding model/dimension metadata, and marks the document `Ready` or `Failed`. Added a Groq-compatible embedding service, repository methods for vector update/search, pgvector migration, configuration defaults, unit tests, and docs.
+
+**Why this approach:** This keeps RAG concerns layered correctly: Application owns the reindex use case, Infrastructure owns HTTP provider calls and PostgreSQL vector SQL, and Domain only tracks embedding metadata. The `embedding` column is intentionally stored through raw SQL instead of mapping a vector type into the Domain entity, which avoids adding an EF vector package/type to the core model before retrieval behavior is fully designed.
+
+**Alternatives considered:** Embedding during `POST /kb/documents` was deferred because provider failures would make document creation fragile and slower. A background job would be better for large documents, but a synchronous manual endpoint is easier to test and debug for this learning slice. Mapping pgvector directly onto `DocumentChunk` was deferred to keep the Domain model provider-agnostic.
+
+**Follow-ups / risks:** Confirm the configured Groq embedding model is available in the user's Groq account; provider model availability can change. Add a chat query embedding + similarity-search use case next, then connect retrieved chunks into chat responses. If `Embedding:Dimensions` changes from 768, create a new matching vector column or migration strategy and re-embed all chunks.
+
+**Reviewed by human:** ?
 ## [2026-08-02] Add server-side knowledge document chunking
 
 **Prompt/task summary:** Explain why KB content uses content hashes, then add a backend chunking service so admins can paste a full document and the server splits it into chunks automatically.

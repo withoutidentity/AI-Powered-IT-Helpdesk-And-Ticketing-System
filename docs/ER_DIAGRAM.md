@@ -115,6 +115,7 @@ erDiagram
         int token_count "nullable"
         string embedding_model "nullable metadata"
         int embedding_dimensions "nullable metadata"
+        vector embedding "nullable vector(768)"
         timestamptz created_at
     }
 
@@ -164,17 +165,15 @@ erDiagram
 - `actor_id` stores the user who performed the change. `old_value` and `new_value` store compact string snapshots so the log remains understandable even if the ticket changes again later.
 
 ### `knowledge_documents` / `document_chunks`
-- Current implemented foundation stores documents and ordered text chunks without the
-  actual vector column yet. `embedding_model` and `embedding_dimensions` are nullable
-  metadata placeholders so later RAG slices can record which model produced a chunk's
-  embedding.
-- The next vector-search slice should add the pgvector EF mapping/package and a nullable
-  `embedding vector(n)` column once the embedding model and exact dimension are confirmed.
-  Getting `n` wrong means re-embedding every chunk, so that decision is intentionally
-  deferred until the model is verified.
-- Future vector index: `CREATE INDEX ON document_chunks USING hnsw (embedding vector_cosine_ops);`
-  (or `ivfflat` depending on the pgvector version available) for fast approximate
-  nearest-neighbor search.
+- Current implemented foundation stores documents, ordered text chunks, embedding metadata,
+  and nullable vectors in `document_chunks.embedding vector(768)`. `embedding_model` and
+  `embedding_dimensions` record which model produced each vector so reindex/debugging can
+  identify stale embeddings.
+- The schema enables PostgreSQL `pgvector` with `CREATE EXTENSION IF NOT EXISTS vector;`.
+  The current vector dimension is 768 because `Embedding:Dimensions` is configured to 768.
+  If this dimension changes, all existing chunks must be re-embedded into a matching column.
+- Vector index: `CREATE INDEX IX_document_chunks_embedding_hnsw ON document_chunks USING hnsw (embedding vector_cosine_ops) WHERE embedding IS NOT NULL;`
+  for approximate nearest-neighbor cosine search.
 - `chunk_index` preserves order within a document and is unique per document, useful for
   reconstructing context or debugging retrieval quality. Pasted text is chunked server-side
   by Markdown headings first, then by long-section word windows with overlap.

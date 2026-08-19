@@ -1,4 +1,5 @@
-using Application.KnowledgeBase.Commands.CreateKnowledgeDocument;
+﻿using Application.KnowledgeBase.Commands.CreateKnowledgeDocument;
+using Application.KnowledgeBase.Commands.ReindexKnowledgeDocument;
 using Application.KnowledgeBase.Queries.GetKnowledgeDocumentDetail;
 using Application.KnowledgeBase.Queries.GetKnowledgeDocuments;
 using MediatR;
@@ -71,6 +72,26 @@ public sealed class KnowledgeBaseController : ControllerBase
         return CreatedAtAction(nameof(GetDocument), new { documentId = result.Value!.Id }, result.Value);
     }
 
+
+    [HttpPost("{documentId:guid}/reindex")]
+    public async Task<IActionResult> ReindexDocument(Guid documentId, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new ReindexKnowledgeDocumentCommand(documentId), cancellationToken);
+        if (!result.IsSuccess)
+        {
+            return result.ErrorCode switch
+            {
+                "DocumentNotFound" => NotFoundProblem(result.ErrorMessage!),
+                "Forbidden" => ForbiddenProblem(result.ErrorMessage!),
+                "NoChunks" => ValidationProblem(result.ErrorMessage!),
+                "EmbeddingFailed" => BadRequestProblem(result.ErrorMessage!),
+                "ValidationFailed" => ValidationProblem(result.ErrorMessage!),
+                _ => BadRequestProblem(result.ErrorMessage!)
+            };
+        }
+
+        return Ok(result.Value);
+    }
     private IActionResult BadRequestProblem(string detail)
     {
         return Problem(title: "Bad request", detail: detail, statusCode: StatusCodes.Status400BadRequest);
