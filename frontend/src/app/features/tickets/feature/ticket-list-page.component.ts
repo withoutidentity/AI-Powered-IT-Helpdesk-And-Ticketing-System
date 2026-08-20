@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize, forkJoin } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
+import { getApiErrorMessage } from '../../../core/http/api-error-message';
 import { TicketActivity, TicketComment, TicketDetail, TicketPriority, TicketStatus, TicketSummary, UserRef } from '../data-access/ticket.models';
 import { TicketService } from '../data-access/ticket.service';
 
@@ -94,7 +95,7 @@ export class TicketListPageComponent implements OnInit {
         this.syncAssignmentForm(detail);
         this.loadTicketThreads(detail.id);
       },
-      error: () => this.errorMessage.set('Could not load ticket detail.'),
+      error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Could not load ticket detail.')),
     });
   }
 
@@ -255,7 +256,7 @@ export class TicketListPageComponent implements OnInit {
           this.selectTicket(response.items[0]);
         }
       },
-      error: () => this.errorMessage.set('Could not load tickets.'),
+      error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Could not load tickets.')),
     });
   }
 
@@ -270,7 +271,7 @@ export class TicketListPageComponent implements OnInit {
       }),
     ).subscribe({
       next: (agents) => this.assignableAgents.set(agents),
-      error: () => this.errorMessage.set('Could not load assignable agents.'),
+      error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Could not load assignable agents.')),
     });
   }
 
@@ -288,14 +289,14 @@ export class TicketListPageComponent implements OnInit {
         this.comments.set(comments);
         this.activities.set(activities);
       },
-      error: () => this.threadErrorMessage.set('Could not load ticket comments or activity.'),
+      error: (error) => this.threadErrorMessage.set(getApiErrorMessage(error, 'Could not load ticket comments or activity.')),
     });
   }
 
   private loadActivities(ticketId: string): void {
     this.ticketService.listActivities(ticketId).subscribe({
       next: (activities) => this.activities.set(activities),
-      error: () => this.threadErrorMessage.set('Could not refresh ticket activity.'),
+      error: (error) => this.threadErrorMessage.set(getApiErrorMessage(error, 'Could not refresh ticket activity.')),
     });
   }
 
@@ -344,42 +345,22 @@ export class TicketListPageComponent implements OnInit {
     });
   }
 
-  private setThreadMutationError(error: { status?: number } | null | undefined, fallback: string): void {
-    if (error?.status === 403) {
-      this.threadErrorMessage.set('You do not have permission to comment on this ticket.');
-      return;
-    }
-
-    if (error?.status === 404) {
-      this.threadErrorMessage.set('Ticket was not found.');
-      return;
-    }
-
-    this.threadErrorMessage.set(fallback);
+  private setThreadMutationError(error: unknown, fallback: string): void {
+    this.threadErrorMessage.set(getApiErrorMessage(error, {
+      fallback,
+      forbidden: 'You do not have permission to comment on this ticket.',
+      notFound: 'Ticket was not found.',
+    }));
   }
 
-  private setTicketMutationError(error: { status?: number } | null | undefined, fallback: string): void {
-    if (error?.status === 400) {
-      this.errorMessage.set('The requested ticket update is invalid.');
-      return;
-    }
-
-    if (error?.status === 403) {
-      this.errorMessage.set('You do not have permission to update this ticket.');
-      return;
-    }
-
-    if (error?.status === 404) {
-      this.errorMessage.set('Ticket or assignee was not found.');
-      return;
-    }
-
-    if (error?.status === 409) {
-      this.errorMessage.set('This status transition is not allowed.');
-      return;
-    }
-
-    this.errorMessage.set(fallback);
+  private setTicketMutationError(error: unknown, fallback: string): void {
+    this.errorMessage.set(getApiErrorMessage(error, {
+      fallback,
+      validation: 'The requested ticket update is invalid.',
+      forbidden: 'You do not have permission to update this ticket.',
+      notFound: 'Ticket or assignee was not found.',
+      conflict: 'This status transition is not allowed.',
+    }));
   }
 
   private toSummary(ticket: TicketDetail): TicketSummary {

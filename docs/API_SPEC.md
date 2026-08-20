@@ -211,7 +211,7 @@ not blanket access).
     "sender": "Assistant",
     "content": "Go to Settings > Wi-Fi and select 'Office-5G'...",
     "intent": null,
-    "sourceDocuments": ["IT_Manual_v2.pdf#chunk-14"],
+    "sourceDocuments": ["IT Knowledge Base#chunk-14"],
     "createdAt": "2026-07-29T09:05:12Z"
   }
 ]
@@ -220,7 +220,7 @@ not blanket access).
 ---
 
 ### `POST /chat/conversations/{conversationId}/messages`
-Sends a user message, embeds the message as a KB search query, retrieves relevant chunks, sends those chunks plus the question to Groq for a grounded answer, and returns the persisted user message plus assistant response. If Groq fails, the backend falls back to a retrieval-only response. Streaming SSE replaces this JSON response in a later slice.
+Sends a user message, embeds the message as a KB search query, retrieves relevant chunks, sends those chunks plus the question to Groq for a grounded answer, and returns the persisted user message plus assistant response. If Groq fails, the backend falls back to a retrieval-only response. Streaming SSE replaces this JSON response in a later slice. Assistant messages generated from KB/RAG also persist source citations in `message_sources`; `sourceDocuments` is returned for traceability but the Employee UI does not need to display it.
 
 **Auth required:** Yes - must be the conversation owner.
 **Response content-type:** `application/json` in the current no-AI slice; `text/event-stream` when streaming AI is implemented.

@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, ElementRef, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { getApiErrorMessage } from '../../../core/http/api-error-message';
 import { finalize } from 'rxjs';
 import { ChatService } from '../data-access/chat.service';
 import { Conversation, Message } from '../data-access/chat.models';
@@ -72,7 +73,7 @@ export class ChatPageComponent implements OnInit {
           this.selectConversation(conversations[0]);
         }
       },
-      error: () => this.errorMessage.set('Could not load conversations.'),
+      error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Could not load conversations.')),
     });
   }
 
@@ -109,7 +110,7 @@ export class ChatPageComponent implements OnInit {
         this.isCreatingNewConversation.set(false);
         this.newConversationForm.reset({ title: '' });
       },
-      error: () => this.errorMessage.set('Could not start a conversation.'),
+      error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Could not start a conversation.')),
     });
   }
 
@@ -161,14 +162,17 @@ export class ChatPageComponent implements OnInit {
         this.statusMessage.set(`Ticket created: ${ticket.title}`);
       },
       error: (error) => {
-        const status = error?.status;
+        const status = typeof error === 'object' && error !== null && 'status' in error ? (error as { status?: unknown }).status : null;
         if (status === 409) {
           this.markActiveConversationHasTicket();
           this.errorMessage.set('A ticket already exists for this conversation.');
           return;
         }
 
-        this.errorMessage.set('Could not create a ticket.');
+        this.errorMessage.set(getApiErrorMessage(error, {
+          fallback: 'Could not create a ticket.',
+          conflict: 'A ticket already exists for this conversation.',
+        }));
       },
     });
   }
@@ -216,9 +220,9 @@ export class ChatPageComponent implements OnInit {
         this.conversationHasTicket.set(conversation.hasTicket);
         this.sendMessageToConversation(conversation.id, content);
       },
-      error: () => {
+      error: (error) => {
         this.isSending.set(false);
-        this.errorMessage.set('Could not start a conversation.');
+        this.errorMessage.set(getApiErrorMessage(error, 'Could not start a conversation.'));
       },
     });
   }
@@ -234,7 +238,7 @@ export class ChatPageComponent implements OnInit {
         this.messages.set(messages);
         this.scrollMessagesToBottom();
       },
-      error: () => this.errorMessage.set('Could not load messages.'),
+      error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Could not load messages.')),
     });
   }
 
@@ -250,7 +254,7 @@ export class ChatPageComponent implements OnInit {
         this.scrollMessagesToBottom();
         this.loadConversations();
       },
-      error: () => this.errorMessage.set('Could not send the message.'),
+      error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Could not send the message.')),
     });
   }
 

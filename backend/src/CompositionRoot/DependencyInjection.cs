@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IConversationRepository, ConversationRepository>();
         services.AddScoped<IMessageRepository, MessageRepository>();
+        services.AddScoped<IMessageSourceRepository, MessageSourceRepository>();
         services.AddScoped<ITicketRepository, TicketRepository>();
         services.AddScoped<ITicketCommentRepository, TicketCommentRepository>();
         services.AddScoped<ITicketActivityRepository, TicketActivityRepository>();

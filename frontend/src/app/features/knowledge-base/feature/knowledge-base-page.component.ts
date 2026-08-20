@@ -3,6 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
+import { getApiErrorMessage } from '../../../core/http/api-error-message';
 import { KnowledgeBaseService } from '../data-access/knowledge-base.service';
 import { KnowledgeDocumentDetail, KnowledgeDocumentSummary } from '../data-access/knowledge-base.models';
 
@@ -131,22 +132,13 @@ export class KnowledgeBasePageComponent implements OnInit {
     });
   }
 
-  private setError(error: { status?: number } | null | undefined, fallback: string): void {
-    if (error?.status === 403) {
-      this.errorMessage.set('You do not have permission to use the knowledge base admin area.');
-      return;
-    }
-
-    if (error?.status === 404) {
-      this.errorMessage.set('Document was not found.');
-      return;
-    }
-
-    if (error?.status === 400) {
-      this.errorMessage.set('The submitted document data is invalid.');
-      return;
-    }
-
-    this.errorMessage.set(fallback);
+  private setError(error: unknown, fallback: string): void {
+    this.errorMessage.set(getApiErrorMessage(error, {
+      fallback,
+      validation: 'The submitted document data is invalid.',
+      forbidden: 'You do not have permission to use the knowledge base admin area.',
+      notFound: 'Document was not found.',
+      rateLimited: 'The embedding provider rate limit was reached. Wait and try again.',
+    }));
   }
 }

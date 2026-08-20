@@ -1,3 +1,54 @@
+## [2026-08-20] Distinguish login server-down errors
+
+**Prompt/task summary:** Fix the login page showing "Username or password is incorrect" when the backend API server is not running.
+
+**Files changed:**
+- `frontend/src/app/features/auth/feature/login-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Login now maps `HttpErrorResponse.status === 0` to a backend-unreachable message, keeps `401` as invalid credentials, shows backend problem details when available, and uses a generic sign-in failure for other cases.
+
+**Why this approach:** Treating every login error as invalid credentials was misleading during local development. Angular reports network/CORS/server-down failures as status `0`, so checking that first gives the user the correct next action without weakening auth behavior.
+
+**Alternatives considered:** Adding a global error interceptor was deferred because this request is specifically about login and other feature pages currently have their own contextual error handling.
+
+**Follow-ups / risks:** Consider a shared frontend API error mapper later so chat/tickets/KB pages also distinguish server-down, forbidden, validation, and provider failures consistently.
+
+**Reviewed by human:** ?
+## [2026-08-20] Persist RAG source citations for chat messages
+
+**Prompt/task summary:** Persist RAG sources behind the scenes without adding Employee-facing source links in the chat bubble.
+
+**Files changed:**
+- `backend/src/Domain/Entities/MessageSource.cs`
+- `backend/src/Application/Common/Interfaces/IMessageSourceRepository.cs`
+- `backend/src/Application/Common/Models/MessageSourceReference.cs`
+- `backend/src/Application/Chat/Models/MessageDto.cs`
+- `backend/src/Application/Chat/Commands/SendMessage/SendMessageCommandHandler.cs`
+- `backend/src/Application/Chat/Queries/GetMessages/GetMessagesQueryHandler.cs`
+- `backend/src/CompositionRoot/DependencyInjection.cs`
+- `backend/src/Infrastructure/Persistence/AppDbContext.cs`
+- `backend/src/Infrastructure/Persistence/Configurations/MessageSourceConfiguration.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/MessageSourceRepository.cs`
+- `backend/src/Infrastructure/Persistence/Migrations/20260820041226_AddMessageSources.cs`
+- `backend/src/Infrastructure/Persistence/Migrations/20260820041226_AddMessageSources.Designer.cs`
+- `backend/src/Infrastructure/Persistence/Migrations/AppDbContextModelSnapshot.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `frontend/src/app/features/chat/data-access/chat.models.ts`
+- `docs/API_SPEC.md`
+- `docs/ER_DIAGRAM.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added the `message_sources` table and domain/repository plumbing to persist which KB chunks grounded each assistant RAG response. `SendMessageCommandHandler` now writes source rows for retrieved chunks used in the assistant answer, and `GetMessagesQueryHandler` returns `sourceDocuments` labels for traceability. The frontend chat model knows about `sourceDocuments`, but the UI does not display source links.
+
+**Why this approach:** The user correctly noted Employee users do not need to read raw Markdown KB documents. Persisting source citations behind the scenes preserves audit/debug traceability required by the project plan without adding UI clutter. It also avoids parsing the textual `Sources:` block later.
+
+**Alternatives considered:** Showing source links in the chat bubble was rejected for now because it is not useful for the Employee workflow. Persisting only source labels in message content was rejected because it would be fragile and hard to query for diagnostics.
+
+**Follow-ups / risks:** Add staff/admin diagnostics later to inspect source chunks for a conversation or ticket. Consider storing source rank/score once retrieval returns explicit similarity distances.
+
+**Reviewed by human:** ?
 ## [2026-08-20] Strip Markdown markers from chat AI answers
 
 **Prompt/task summary:** Fix Groq-generated chat answers showing Markdown markers like `**` in the plain-text chat UI.
@@ -4916,4 +4967,28 @@ revisit whether the transition graph needs an `Admin` override path.
 
 
 
+
+---
+## [2026-08-20] Add shared frontend API error mapper
+
+**Prompt/task summary:** Improve frontend API error messages so network failures, auth failures, permission errors, validation errors, conflicts, rate limits, and server errors show clearer user-facing messages instead of misleading generic messages.
+
+**Files changed:**
+- `frontend/src/app/core/http/api-error-message.ts`
+- `frontend/src/app/features/auth/feature/login-page.component.ts`
+- `frontend/src/app/features/auth/feature/register-page.component.ts`
+- `frontend/src/app/features/chat/feature/chat-page.component.ts`
+- `frontend/src/app/features/tickets/feature/ticket-list-page.component.ts`
+- `frontend/src/app/features/knowledge-base/feature/knowledge-base-page.component.ts`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a shared `getApiErrorMessage` helper under `core/http` that maps `HttpErrorResponse` statuses to consistent messages, including `status === 0` for an unreachable API server. Updated auth, chat, ticket, and knowledge-base pages to use the helper while preserving feature-specific copy for invalid login, duplicate tickets, ticket permissions, and KB admin permissions.
+
+**Why this approach:** A small shared helper matches the frontend architecture documented in `docs/PROJECT_PLAN.md`, which reserves `core/http` for app-wide HTTP concerns. It avoids duplicating fragile status-code checks across feature components while still letting each feature override copy for its own workflow.
+
+**Alternatives considered:** A global toast/interceptor-only solution was deferred because these screens already render inline form/page errors and changing that pattern would be broader UI work. Keeping per-component status checks was rejected because the login bug showed that duplicated error handling can drift and produce misleading messages.
+
+**Follow-ups / risks:** Some API failures may still expose backend `detail` text for `400`, `404`, `409`, and `429`; that is useful for validation/provider-limit messages, but production copy should be reviewed before public deployment.
+
+**Reviewed by human:** [ ]
 

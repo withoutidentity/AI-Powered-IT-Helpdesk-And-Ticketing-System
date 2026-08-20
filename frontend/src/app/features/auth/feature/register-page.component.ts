@@ -1,10 +1,10 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { UserRole } from '../../../core/auth/auth.models';
 import { AuthService } from '../../../core/auth/auth.service';
+import { getApiErrorMessage } from '../../../core/http/api-error-message';
 
 @Component({
   selector: 'app-register-page',
@@ -42,20 +42,15 @@ export class RegisterPageComponent {
       finalize(() => this.isSubmitting.set(false)),
     ).subscribe({
       next: () => void this.router.navigate(['/login'], { queryParams: { registered: '1' } }),
-      error: (error: unknown) => this.errorMessage.set(this.getErrorMessage(error)),
+      error: (error: unknown) => this.errorMessage.set(getApiErrorMessage(error, {
+        fallback: 'Could not create the account. Check for duplicate username or email.',
+        conflict: 'Username or email already exists.',
+      })),
     });
   }
 
   hasError(controlName: keyof typeof this.form.controls): boolean {
     const control = this.form.controls[controlName];
     return control.invalid && (control.dirty || control.touched);
-  }
-
-  private getErrorMessage(error: unknown): string {
-    if (error instanceof HttpErrorResponse && typeof error.error?.detail === 'string') {
-      return error.error.detail;
-    }
-
-    return 'Could not create the account. Check for duplicate username or email.';
   }
 }

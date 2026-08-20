@@ -76,7 +76,7 @@ public sealed class ChatCommandHandlerTests
         conversations.Items.Add(conversation);
         var messages = new FakeMessageRepository();
         var unitOfWork = new FakeUnitOfWork();
-        var handler = new SendMessageCommandHandler(new FakeCurrentUserService(currentUserId), conversations, messages, new FakeKnowledgeBaseSearchService(), new FakeChatAiService(), unitOfWork);
+        var handler = new SendMessageCommandHandler(new FakeCurrentUserService(currentUserId), conversations, messages, new FakeKnowledgeBaseSearchService(), new FakeChatAiService(), new FakeMessageSourceRepository(), unitOfWork);
 
         var result = await handler.Handle(new SendMessageCommand(conversation.Id, " My keyboard is broken. "), CancellationToken.None);
 
@@ -111,7 +111,8 @@ public sealed class ChatCommandHandlerTests
                 "fake-embedding",
                 3,
                 1));
-        var handler = new SendMessageCommandHandler(new FakeCurrentUserService(currentUserId), conversations, messages, search, new FakeChatAiService("**1. Reconnect to Office-5G.**"), unitOfWork);
+        var messageSources = new FakeMessageSourceRepository();
+        var handler = new SendMessageCommandHandler(new FakeCurrentUserService(currentUserId), conversations, messages, search, new FakeChatAiService("**1. Reconnect to Office-5G.**"), messageSources, unitOfWork);
 
         var result = await handler.Handle(new SendMessageCommand(conversation.Id, "wifi not working"), CancellationToken.None);
 
@@ -153,6 +154,7 @@ public sealed class ChatCommandHandlerTests
             messages,
             search,
             new FakeChatAiService(shouldFail: true),
+            new FakeMessageSourceRepository(),
             unitOfWork);
 
         var result = await handler.Handle(new SendMessageCommand(conversation.Id, "wifi not working"), CancellationToken.None);
@@ -174,6 +176,7 @@ public sealed class ChatCommandHandlerTests
             new FakeMessageRepository(),
             new FakeKnowledgeBaseSearchService(),
             new FakeChatAiService(),
+            new FakeMessageSourceRepository(),
             new FakeUnitOfWork());
 
         var result = await handler.Handle(new SendMessageCommand(conversation.Id, "Help"), CancellationToken.None);
@@ -194,7 +197,8 @@ public sealed class ChatCommandHandlerTests
         var messages = new FakeMessageRepository();
         messages.Items.Add(second);
         messages.Items.Add(first);
-        var handler = new GetMessagesQueryHandler(new FakeCurrentUserService(currentUserId), conversations, messages);
+        var messageSources = new FakeMessageSourceRepository();
+        var handler = new GetMessagesQueryHandler(new FakeCurrentUserService(currentUserId), conversations, messages, messageSources);
 
         var result = await handler.Handle(new GetMessagesQuery(conversation.Id), CancellationToken.None);
 
@@ -205,6 +209,27 @@ public sealed class ChatCommandHandlerTests
     }
 
 
+
+    [Fact]
+    public async Task GetMessages_MessageWithSources_ReturnsSourceDocuments()
+    {
+        var currentUserId = Guid.NewGuid();
+        var conversation = Conversation.Start(currentUserId, "Wi-Fi", DateTimeOffset.UtcNow.AddMinutes(-2));
+        var assistant = conversation.AddMessage(MessageSender.Assistant, "Answer", null, DateTimeOffset.UtcNow);
+        var conversations = new FakeConversationRepository();
+        conversations.Items.Add(conversation);
+        var messages = new FakeMessageRepository();
+        messages.Items.Add(assistant);
+        var messageSources = new FakeMessageSourceRepository(
+            new MessageSourceReference(assistant.Id, Guid.NewGuid(), "Office Wi-Fi Guide", 4));
+        var handler = new GetMessagesQueryHandler(new FakeCurrentUserService(currentUserId), conversations, messages, messageSources);
+
+        var result = await handler.Handle(new GetMessagesQuery(conversation.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().ContainSingle();
+        result.Value![0].SourceDocuments.Should().ContainSingle().Which.Should().Be("Office Wi-Fi Guide#chunk-4");
+    }
     [Fact]
     public async Task CreateTicketFromMessage_UserMessage_CreatesOpenTicketLinkedToMessage()
     {
@@ -414,6 +439,33 @@ public sealed class ChatCommandHandlerTests
             }
 
             return Task.FromResult(_answer);
+        }
+    }
+
+    private sealed class FakeMessageSourceRepository : IMessageSourceRepository
+    {
+        private readonly IReadOnlyList<MessageSourceReference> _references;
+
+        public FakeMessageSourceRepository(params MessageSourceReference[] references)
+        {
+            _references = references;
+        }
+
+        public List<MessageSource> Items { get; } = new();
+
+        public Task<IReadOnlyList<MessageSourceReference>> ListByMessageIdsAsync(IReadOnlyCollection<Guid> messageIds, CancellationToken cancellationToken)
+        {
+            IReadOnlyList<MessageSourceReference> result = _references
+                .Where(source => messageIds.Contains(source.MessageId))
+                .ToList();
+
+            return Task.FromResult(result);
+        }
+
+        public Task AddRangeAsync(IReadOnlyCollection<MessageSource> sources, CancellationToken cancellationToken)
+        {
+            Items.AddRange(sources);
+            return Task.CompletedTask;
         }
     }
     private sealed class FakeTicketRepository : ITicketRepository

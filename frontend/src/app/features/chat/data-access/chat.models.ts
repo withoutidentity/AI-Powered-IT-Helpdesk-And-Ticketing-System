@@ -14,6 +14,7 @@ export interface Message {
   content: string;
   intent: 'Greeting' | 'Question' | 'Action' | null;
   createdAt: string;
+  sourceDocuments: string[];
 }
 
 export interface SendMessageResponse {

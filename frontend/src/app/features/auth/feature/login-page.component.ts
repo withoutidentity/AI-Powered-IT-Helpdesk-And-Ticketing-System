@@ -3,6 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../../core/auth/auth.service';
+import { getApiErrorMessage } from '../../../core/http/api-error-message';
 
 @Component({
   selector: 'app-login-page',
@@ -40,7 +41,10 @@ export class LoginPageComponent {
         const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') ?? '/';
         void this.router.navigateByUrl(returnUrl);
       },
-      error: () => this.errorMessage.set('Username or password is incorrect.'),
+      error: (error: unknown) => this.errorMessage.set(getApiErrorMessage(error, {
+        fallback: 'Could not sign in. Check that the backend server is running and try again.',
+        unauthorized: 'Username or password is incorrect.',
+      })),
     });
   }
 }
