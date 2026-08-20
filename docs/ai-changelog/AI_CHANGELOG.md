@@ -1,3 +1,106 @@
+## [2026-08-20] Document planned KB duplicate handling
+
+**Prompt/task summary:** Decide whether to implement KB duplicate/version handling now or later, and record the planned work in project docs.
+
+**Files changed:**
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a planned `Duplicate / overlapping KB documents` subsection under the RAG pipeline design. The plan records future metadata fields (`category`, `source`, `version`, `effective_from`, `is_active`, `priority`), active-document filtering, authoritative/newer document preference, and search-time deduplication. Also updated older wording so embedding goes through the configured `IEmbeddingService` instead of implying Groq is always the embedding provider.
+
+**Why this approach:** Duplicate KB handling is important, but implementing it before semantic search would be premature because there is not yet a retrieval result set to measure or tune. Recording it as a planned retrieval-quality slice keeps the roadmap visible without expanding the current scope.
+
+**Alternatives considered:** Implementing metadata and dedup immediately was deferred to avoid schema/API churn before the first KB search endpoint exists. Ignoring the topic was rejected because overlapping documents are common in real KBs and should influence the RAG roadmap.
+
+**Follow-ups / risks:** After semantic search is implemented, add KB metadata fields and retrieval filters/reranking based on real search behavior.
+
+**Reviewed by human:** ?
+
+## [2026-08-20] Make knowledge document reindex incremental
+
+**Prompt/task summary:** Update KB document reindexing so it embeds only chunks that do not already have embeddings.
+
+**Files changed:**
+- `backend/src/Application/Common/Interfaces/IEmbeddingService.cs`
+- `backend/src/Application/KnowledgeBase/Commands/ReindexKnowledgeDocument/ReindexKnowledgeDocumentCommandHandler.cs`
+- `backend/src/Infrastructure/Ai/GoogleEmbeddingService.cs`
+- `backend/src/Infrastructure/Ai/OpenAiEmbeddingService.cs`
+- `backend/src/Infrastructure/Ai/GroqEmbeddingService.cs`
+- `backend/tests/Application.UnitTests/KnowledgeBase/KnowledgeDocumentHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `Model` and `Dimensions` metadata to `IEmbeddingService` and all embedding providers. Reindex now filters chunks before calling the provider, skipping chunks whose `embedding_model` and `embedding_dimensions` already match the active provider configuration. Added unit coverage proving only missing chunks are embedded.
+
+**Why this approach:** The previous endpoint could consume the whole daily provider-request budget on every retry, even for chunks that were already successfully embedded. Checking metadata before provider calls makes reindex retryable and much cheaper while preserving the existing vector schema.
+
+**Alternatives considered:** Checking whether the vector column itself is non-null was considered, but Application cannot see the raw pgvector column without leaking persistence details. Using `embedding_model` plus `embedding_dimensions` keeps the decision inside the current entity model and also handles provider/model changes correctly.
+
+**Follow-ups / risks:** If a chunk's content changes without recreating the row, compare `content_hash` against stored embedding metadata in a future slice. Current behavior assumes changed content creates new chunks or updates metadata through a later reingestion flow.
+
+**Reviewed by human:** ?
+## [2026-08-20] Fix Google embedding output dimensionality request
+
+**Prompt/task summary:** Fix Google Gemini embedding reindex returning 3072 dimensions instead of the configured 768 dimensions.
+
+**Files changed:**
+- `backend/src/Infrastructure/Ai/GoogleEmbeddingService.cs`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Updated the Gemini embedContent request to send `model`, `taskType`, and `outputDimensionality` at the top level as well as inside `embedContentConfig`, so the REST endpoint receives the reduced output dimension. Added manual vector normalization when using reduced dimensions, matching Google's note that `gemini-embedding-001` reduced-dimension vectors should be normalized by the caller.
+
+**Why this approach:** The previous request shape was accepted by the API but did not apply the configured 768 dimensions, so Google returned the default 3072-dimensional vector. Sending both the documented top-level compatibility fields and config object keeps the request robust while preserving the existing `vector(768)` database schema.
+
+**Alternatives considered:** Changing the database to `vector(3072)` was rejected because the project intentionally chose 768 for storage/query efficiency and Google recommends 768 as a valid reduced dimension.
+
+**Follow-ups / risks:** If Google changes the REST request shape again, add an integration test behind an opt-in API key environment variable to catch provider contract drift.
+
+**Reviewed by human:** ?
+## [2026-08-20] Add Google Gemini embedding provider
+
+**Prompt/task summary:** Switch the active KB/RAG embedding provider to Google AI Studio `gemini-embedding-001` after the user chose the free-tier Google path.
+
+**Files changed:**
+- `backend/.env.example`
+- `backend/src/Api/appsettings.json`
+- `backend/src/CompositionRoot/DependencyInjection.cs`
+- `backend/src/Infrastructure/Ai/GoogleEmbeddingService.cs`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GoogleEmbeddingService` for the Gemini API `models/{model}:embedContent` endpoint. The service sends `taskType` as `RETRIEVAL_DOCUMENT` or `RETRIEVAL_QUERY`, requests `outputDimensionality=768`, validates the returned vector length, and reuses the existing embedding request limiter. The default embedding provider is now `Google` with `gemini-embedding-001`, while OpenAI and Groq embedding services remain selectable fallbacks.
+
+**Why this approach:** The existing database column is `vector(768)`, and Google explicitly supports reduced output dimensions for `gemini-embedding-001`, so this avoids a new migration. Google AI Studio is a better fit for the user's current cost constraints because OpenAI returned `insufficient_quota` until billing is enabled.
+
+**Alternatives considered:** Removing OpenAI support was rejected because keeping it as a fallback costs little and lets the project switch providers via configuration. Switching to `gemini-embedding-2` was deferred because the user specifically chose `gemini-embedding-001` and it already matches text-only KB ingestion.
+
+**Follow-ups / risks:** Google free-tier data-handling and quota behavior should be reviewed before using private company documents. For production, replace the in-memory limiter with persistent counters and consider batch embedding for large document sets.
+
+**Reviewed by human:** ?
+## [2026-08-19] Switch KB embeddings to OpenAI with local rate limits
+
+**Prompt/task summary:** Use OpenAI `text-embedding-3-small` for KB/RAG embeddings instead of Groq, enforce a backend limit of 2 embedding requests per minute and 10 per day, and explain how to get `OpenAI__ApiKey`.
+
+**Files changed:**
+- `backend/.env.example`
+- `backend/src/Api/appsettings.json`
+- `backend/src/CompositionRoot/DependencyInjection.cs`
+- `backend/src/Infrastructure/Ai/OpenAiEmbeddingService.cs`
+- `backend/src/Infrastructure/Ai/EmbeddingRequestRateLimiter.cs`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added an OpenAI embedding provider that calls `/v1/embeddings` with `text-embedding-3-small` and `dimensions=768`, preserving the existing `document_chunks.embedding vector(768)` schema. Added an in-memory embedding request limiter that queues minute-level usage so calls stay under 2 requests/minute and stops once 10 requests/day is reached. Updated dependency injection to select the embedding provider from `Embedding:Provider`, defaulting to OpenAI.
+
+**Why this approach:** The user's Groq free-plan model list does not include an embedding model, so keeping Groq for chat and using OpenAI only for embeddings is the fastest low-cost path. Sending `dimensions=768` avoids another pgvector migration and keeps existing vectors/schema compatible. The local limiter protects the user's API usage even if OpenAI's account-level limits are higher.
+
+**Alternatives considered:** Changing the database to `vector(1536)` for the OpenAI default dimension was rejected to avoid another schema migration before retrieval quality is evaluated. A distributed/persistent rate limiter was deferred because the app is currently single-instance local development; production should use database/Redis-backed counters.
+
+**Follow-ups / risks:** The in-memory daily counter resets if the API process restarts, so it is a local safeguard rather than a billing guarantee. Add a persistent rate-limit table or Redis before production. Next RAG slice should add query embedding + vector search + source citations in chat responses.
+
+**Reviewed by human:** ?
 ## [2026-08-11] Add knowledge-base embedding reindex and pgvector storage
 
 **Prompt/task summary:** Continue the next KB/RAG slice by adding embedding storage and reindexing, update docs, and explain where Admin-created KB documents are stored/read from.

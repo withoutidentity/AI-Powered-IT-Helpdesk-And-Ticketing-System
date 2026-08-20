@@ -1,6 +1,7 @@
 ﻿using Application.Common.Interfaces;
 using Application.Common.Models;
 using Application.KnowledgeBase.Models;
+using Domain.Entities;
 using Domain.Enums;
 using MediatR;
 
@@ -53,11 +54,15 @@ public sealed class ReindexKnowledgeDocumentCommandHandler : IRequestHandler<Rei
 
         try
         {
-            string? embeddingModel = null;
-            int? embeddingDimensions = null;
+            var embeddingModel = _embeddingService.Model;
+            var embeddingDimensions = _embeddingService.Dimensions;
+            var chunksToEmbed = chunks
+                .OrderBy(chunk => chunk.ChunkIndex)
+                .Where(chunk => !IsAlreadyEmbedded(chunk, embeddingModel, embeddingDimensions))
+                .ToList();
             var embeddedCount = 0;
 
-            foreach (var chunk in chunks.OrderBy(chunk => chunk.ChunkIndex))
+            foreach (var chunk in chunksToEmbed)
             {
                 var embedding = await _embeddingService.EmbedDocumentAsync(chunk.Content, cancellationToken);
                 if (embedding.Values.Count == 0)
@@ -75,8 +80,8 @@ public sealed class ReindexKnowledgeDocumentCommandHandler : IRequestHandler<Rei
                     throw new InvalidOperationException("Embedding provider returned inconsistent dimensions for chunks in the same document.");
                 }
 
-                embeddingModel ??= embedding.Model;
-                embeddingDimensions ??= embedding.Dimensions;
+                embeddingModel = embedding.Model;
+                embeddingDimensions = embedding.Dimensions;
                 chunk.MarkEmbedded(embedding.Model, embedding.Dimensions);
                 await _chunks.UpdateEmbeddingAsync(chunk.Id, embedding.Values, embedding.Model, embedding.Dimensions, cancellationToken);
                 embeddedCount++;
@@ -90,8 +95,8 @@ public sealed class ReindexKnowledgeDocumentCommandHandler : IRequestHandler<Rei
                 document.Id,
                 document.Status.ToString(),
                 embeddedCount,
-                embeddingModel!,
-                embeddingDimensions!.Value,
+                embeddingModel,
+                embeddingDimensions ?? 0,
                 document.UpdatedAt));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -102,5 +107,15 @@ public sealed class ReindexKnowledgeDocumentCommandHandler : IRequestHandler<Rei
             return Result<ReindexKnowledgeDocumentResultDto>.Failure("EmbeddingFailed", ex.Message);
         }
     }
+
+    private static bool IsAlreadyEmbedded(DocumentChunk chunk, string embeddingModel, int? embeddingDimensions)
+    {
+        return !string.IsNullOrWhiteSpace(chunk.EmbeddingModel)
+            && string.Equals(chunk.EmbeddingModel, embeddingModel, StringComparison.Ordinal)
+            && embeddingDimensions is not null
+            && chunk.EmbeddingDimensions == embeddingDimensions.Value;
+    }
 }
+
+
 

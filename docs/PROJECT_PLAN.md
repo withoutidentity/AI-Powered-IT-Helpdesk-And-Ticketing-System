@@ -114,7 +114,7 @@ production-grade practices, using:
 | ORM | Entity Framework Core | Migrations, LINQ, good Postgres support via Npgsql |
 | Database | PostgreSQL + `pgvector` extension | One database for both relational data and vector search — avoids running a separate vector DB |
 | AI inference | **Groq API** (OpenAI-compatible `/openai/v1` endpoint) | Very low-latency inference, good for a responsive chat UX; supports streaming and tool/function calling |
-| Embeddings | Groq `/openai/v1/embeddings` (e.g. `nomic-embed-text-v1_5`) | Keeps the AI vendor surface to one provider; **verify current model availability in the Groq console before implementation**, since hosted model lists change — have a fallback (e.g. a local `sentence-transformers` model) documented in case the hosted embeddings endpoint is unavailable |
+| Embeddings | Google AI Studio `gemini-embedding-001` via Gemini `embedContent`, shortened to 768 dimensions | Groq free-plan model access does not currently include embedding models for this project, and OpenAI API requires paid quota. Google AI Studio gives a practical free-tier path for development while keeping chat inference on Groq. The backend enforces a local embedding request limit of 2 requests/minute and 10 requests/day. |
 | Notifications | Discord Webhooks | Simple, no bot hosting required, matches team's existing channel |
 | Automation | **n8n** (self-hosted, Docker) | Owns two workflows where visual, decoupled automation genuinely earns its place: **SLA escalation** (schedule-based) and **knowledge-base ingestion from Google Drive** (event-based). See §20 for full detail and rationale. |
 | Reverse proxy | Nginx | TLS termination, routing FE/BE, gzip |
@@ -193,7 +193,7 @@ production-grade practices, using:
 ### Request flow: knowledge-base ingestion (n8n, event-driven)
 1. n8n's Google Drive Trigger node watches the configured IT-manuals folder for new/updated files.
 2. On a match, n8n downloads the file and calls `POST /api/v1/kb/documents/ingest` (service-authenticated) with the file content and Drive file ID.
-3. The backend chunks, embeds (via Groq), and upserts rows into `document_chunks`, keyed on Drive file ID so re-ingestion updates rather than duplicates.
+3. The backend chunks, embeds through the configured embedding provider, and upserts rows into `document_chunks`, keyed on Drive file ID so re-ingestion updates rather than duplicates.
 4. Details: §20.2.
 
 ---
@@ -239,7 +239,9 @@ backend/src/
 │   │   └── Migrations/
 │   ├── Ai/
 │   │   ├── GroqChatService.cs        # implements IChatAiService
-│   │   └── GroqEmbeddingService.cs   # implements IEmbeddingService
+│   │   ├── GoogleEmbeddingService.cs    # default IEmbeddingService
+│   │   ├── OpenAiEmbeddingService.cs    # optional fallback provider
+│   │   └── GroqEmbeddingService.cs      # optional fallback provider
 │   ├── Notifications/
 │   │   └── DiscordWebhookNotifier.cs # implements ITicketNotifier
 │   └── Identity/
@@ -311,7 +313,7 @@ frontend/src/app/
 ### 10.1 Ingestion (offline / admin-triggered)
 1. Admin uploads a document via `/api/kb/documents`.
 2. Backend extracts text, splits into chunks (~500–800 tokens, with overlap).
-3. Each chunk is sent to Groq's embeddings endpoint; the resulting vector is stored in
+3. Each chunk is sent through the configured embedding provider (`IEmbeddingService`; Google `gemini-embedding-001` by default); the resulting vector is stored in
    `document_chunks.embedding` (`vector` column via `pgvector`).
 4. An index (`ivfflat` or `hnsw`, depending on pgvector version) is built on the embedding
    column for fast approximate nearest-neighbor search.
@@ -333,8 +335,28 @@ enough for the expected data volume of an internal IT knowledge base. If retriev
 scale later demands it, this can be swapped for a dedicated vector store behind the same
 `IEmbeddingService`/repository interfaces without touching Application-layer code.
 
----
+### 10.4 Duplicate / overlapping KB documents (planned)
 
+The system can ingest multiple KB documents that discuss the same issue, and this is normal
+for an internal knowledge base. Duplicate or overlapping Wi-Fi, printer, VPN, or password
+reset guides should not break RAG, but they can waste context tokens or confuse the LLM if
+old and new instructions disagree.
+
+Planned follow-up for retrieval quality:
+- Add KB document metadata such as `category`, `source`, `version`, `effective_from`,
+  `is_active`, and `priority`.
+- Search only active documents by default, so old policies can be retained for audit/debugging
+  without being used as answer context.
+- Prefer authoritative/high-priority/newer documents during retrieval or reranking.
+- Add duplicate control at search time, for example limiting chunks per document and removing
+  near-identical chunks from the final top-k context.
+- Use existing `content_hash` for exact duplicate detection, and vector similarity/reranking
+  later for near-duplicate content that is phrased differently.
+
+This is intentionally deferred until after the first semantic search/RAG slice, because the
+project first needs measurable retrieval results before tuning duplicate handling.
+
+---
 ## 11. Coding Standards & Best Practices
 
 ### Backend (.NET)
@@ -478,7 +500,12 @@ Jwt__AccessTokenMinutes=15
 Jwt__RefreshTokenDays=7
 Groq__ApiKey=<your-groq-api-key>
 Groq__ChatModel=llama-3.3-70b-versatile
-Groq__EmbeddingModel=nomic-embed-text-v1_5
+GoogleAI__ApiKey=<your-google-ai-studio-api-key>
+Embedding__Provider=Google
+Embedding__Model=gemini-embedding-001
+Embedding__Dimensions=768
+Embedding__RateLimit__RequestsPerMinute=2
+Embedding__RateLimit__RequestsPerDay=10
 Discord__WebhookUrl=<your-discord-webhook-url-or-leave-unset>
 ```
 

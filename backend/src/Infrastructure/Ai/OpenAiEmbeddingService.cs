@@ -8,51 +8,59 @@ using Microsoft.Extensions.Configuration;
 
 namespace Infrastructure.Ai;
 
-public sealed class GroqEmbeddingService : IEmbeddingService
+public sealed class OpenAiEmbeddingService : IEmbeddingService
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+
     private readonly HttpClient _httpClient;
+    private readonly EmbeddingRequestRateLimiter _rateLimiter;
     private readonly string _apiKey;
     private readonly string _model;
-    private readonly int? _expectedDimensions;
+    private readonly int? _dimensions;
 
     public string Model => _model;
-    public int? Dimensions => _expectedDimensions;
+    public int? Dimensions => _dimensions;
 
-    public GroqEmbeddingService(HttpClient httpClient, IConfiguration configuration)
+    public OpenAiEmbeddingService(HttpClient httpClient, IConfiguration configuration, EmbeddingRequestRateLimiter rateLimiter)
     {
         _httpClient = httpClient;
-        _apiKey = configuration["Groq:ApiKey"] ?? string.Empty;
-        _model = configuration["Groq:EmbeddingModel"] ?? string.Empty;
-        _expectedDimensions = configuration.GetValue<int?>("Embedding:Dimensions");
+        _rateLimiter = rateLimiter;
+        _apiKey = configuration["OpenAI:ApiKey"] ?? string.Empty;
+        _model = configuration["Embedding:Model"] ?? "text-embedding-3-small";
+        _dimensions = configuration.GetValue<int?>("Embedding:Dimensions");
     }
 
     public Task<EmbeddingResult> EmbedDocumentAsync(string text, CancellationToken cancellationToken)
     {
-        return EmbedAsync("search_document: " + text, cancellationToken);
+        return EmbedAsync(text, cancellationToken);
     }
 
     public Task<EmbeddingResult> EmbedQueryAsync(string text, CancellationToken cancellationToken)
     {
-        return EmbedAsync("search_query: " + text, cancellationToken);
+        return EmbedAsync(text, cancellationToken);
     }
 
     private async Task<EmbeddingResult> EmbedAsync(string input, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(_apiKey))
         {
-            throw new InvalidOperationException("Groq API key is not configured.");
+            throw new InvalidOperationException("OpenAI API key is not configured.");
         }
 
         if (string.IsNullOrWhiteSpace(_model))
         {
-            throw new InvalidOperationException("Groq embedding model is not configured.");
+            throw new InvalidOperationException("Embedding model is not configured.");
         }
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.groq.com/openai/v1/embeddings");
+        await _rateLimiter.WaitForSlotAsync(cancellationToken);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/embeddings");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
         request.Content = new StringContent(
-            JsonSerializer.Serialize(new EmbeddingRequest(_model, input), JsonOptions),
+            JsonSerializer.Serialize(new EmbeddingRequest(_model, input, _dimensions), JsonOptions),
             Encoding.UTF8,
             "application/json");
 
@@ -73,9 +81,9 @@ public sealed class GroqEmbeddingService : IEmbeddingService
             throw new InvalidOperationException("Embedding provider returned an empty vector.");
         }
 
-        if (_expectedDimensions is > 0 && values.Count != _expectedDimensions.Value)
+        if (_dimensions is > 0 && values.Count != _dimensions.Value)
         {
-            throw new InvalidOperationException($"Embedding provider returned {values.Count} dimensions, expected {_expectedDimensions.Value}.");
+            throw new InvalidOperationException($"Embedding provider returned {values.Count} dimensions, expected {_dimensions.Value}.");
         }
 
         return new EmbeddingResult(values, payload.Model ?? _model, values.Count);
@@ -83,7 +91,8 @@ public sealed class GroqEmbeddingService : IEmbeddingService
 
     private sealed record EmbeddingRequest(
         [property: JsonPropertyName("model")] string Model,
-        [property: JsonPropertyName("input")] string Input);
+        [property: JsonPropertyName("input")] string Input,
+        [property: JsonPropertyName("dimensions")] int? Dimensions);
 
     private sealed record EmbeddingResponse(
         [property: JsonPropertyName("model")] string? Model,

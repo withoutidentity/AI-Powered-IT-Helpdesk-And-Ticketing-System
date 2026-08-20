@@ -300,8 +300,10 @@ Creates the single ticket for a conversation from a persisted user message in th
 > Implementation status: the current backend supports JSON-based document creation,
 > read APIs, server-side chunking, and manual embedding reindexing. `POST /kb/documents`
 > splits pasted text into ordered chunks and stores them without vectors initially.
-> `POST /kb/documents/{documentId}/reindex` embeds each chunk and stores the vectors in
-> PostgreSQL `pgvector` (`document_chunks.embedding vector(768)`). File upload, PDF
+> `POST /kb/documents/{documentId}/reindex` embeds each chunk with Google `gemini-embedding-001`
+> shortened to 768 dimensions, then stores the vectors in PostgreSQL `pgvector`
+> (`document_chunks.embedding vector(768)`). The backend limits embedding provider calls to
+> 2 requests/minute and 10 requests/day. File upload, PDF
 > extraction, automatic background ingestion, and chat-time RAG retrieval are planned for
 > later KB/RAG slices.
 
@@ -410,7 +412,7 @@ Returns a document plus its currently stored chunks.
 ---
 
 ### `POST /kb/documents/{documentId}/reindex`
-Embeds the currently stored chunks for a knowledge-base document and writes the vectors to `document_chunks.embedding`.
+Embeds only chunks that do not already have the current embedding model and dimension metadata, then writes vectors to `document_chunks.embedding`. Re-running this endpoint is incremental and does not spend provider requests on chunks that are already embedded for the active model/dimensions.
 
 **Auth required:** `ITAdmin`
 
@@ -420,13 +422,13 @@ Embeds the currently stored chunks for a knowledge-base document and writes the 
   "documentId": "d1...",
   "status": "Ready",
   "embeddedChunkCount": 2,
-  "embeddingModel": "nomic-embed-text-v1_5",
+  "embeddingModel": "gemini-embedding-001",
   "embeddingDimensions": 768,
   "updatedAt": "2026-08-11T09:00:00Z"
 }
 ```
 
-**Errors:** `400` embedding provider failure or no chunks, `403` only IT admins can reindex KB documents, `404` document not found
+**Errors:** `400` embedding provider failure, local embedding rate-limit failure, or no chunks; `403` only IT admins can reindex KB documents; `404` document not found
 
 ---
 

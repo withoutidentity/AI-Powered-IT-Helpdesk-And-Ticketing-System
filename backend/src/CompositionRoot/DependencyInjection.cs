@@ -29,7 +29,18 @@ public static class DependencyInjection
         services.AddScoped<IKnowledgeDocumentRepository, KnowledgeDocumentRepository>();
         services.AddScoped<IDocumentChunkRepository, DocumentChunkRepository>();
         services.AddSingleton<HttpClient>();
-        services.AddScoped<IEmbeddingService, GroqEmbeddingService>();
+        services.AddSingleton<EmbeddingRequestRateLimiter>();
+        services.AddScoped<IEmbeddingService>(provider =>
+        {
+            var embeddingProvider = configuration["Embedding:Provider"] ?? "Google";
+            return embeddingProvider.ToUpperInvariant() switch
+            {
+                "GOOGLE" => ActivatorUtilities.CreateInstance<GoogleEmbeddingService>(provider),
+                "GROQ" => ActivatorUtilities.CreateInstance<GroqEmbeddingService>(provider),
+                "OPENAI" => ActivatorUtilities.CreateInstance<OpenAiEmbeddingService>(provider),
+                _ => ActivatorUtilities.CreateInstance<GoogleEmbeddingService>(provider)
+            };
+        });
         services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<AppDbContext>());
         services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
@@ -37,3 +48,4 @@ public static class DependencyInjection
         return services;
     }
 }
+

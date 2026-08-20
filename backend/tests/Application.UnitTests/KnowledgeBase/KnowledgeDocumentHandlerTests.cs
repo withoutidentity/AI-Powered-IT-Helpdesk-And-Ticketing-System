@@ -168,6 +168,31 @@ public sealed class KnowledgeDocumentHandlerTests
         unitOfWork.SaveCalls.Should().Be(2);
     }
 
+
+    [Fact]
+    public async Task ReindexKnowledgeDocument_ITAdmin_SkipsChunksAlreadyEmbeddedWithCurrentModelAndDimensions()
+    {
+        var document = CreateReadyDocument("Wi-Fi Guide");
+        var alreadyEmbedded = DocumentChunk.Create(document.Id, 0, "# Wi-Fi", "hash-1", DateTimeOffset.UtcNow);
+        alreadyEmbedded.MarkEmbedded("fake-embedding", 3);
+        var missingEmbedding = DocumentChunk.Create(document.Id, 1, "# VPN", "hash-2", DateTimeOffset.UtcNow);
+        var documents = new FakeKnowledgeDocumentRepository(document);
+        var chunks = new FakeDocumentChunkRepository(alreadyEmbedded, missingEmbedding);
+        var embeddingService = new FakeEmbeddingService();
+        var handler = new ReindexKnowledgeDocumentCommandHandler(
+            new FakeCurrentUserService(Guid.NewGuid(), UserRole.ITAdmin),
+            documents,
+            chunks,
+            embeddingService,
+            new FakeUnitOfWork());
+
+        var result = await handler.Handle(new ReindexKnowledgeDocumentCommand(document.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.EmbeddedChunkCount.Should().Be(1);
+        embeddingService.DocumentCallCount.Should().Be(1);
+        chunks.EmbeddingUpdates.Should().ContainSingle().Which.Should().Be(missingEmbedding.Id);
+    }
     [Fact]
     public async Task ReindexKnowledgeDocument_ITAgent_ReturnsForbidden()
     {
@@ -295,8 +320,13 @@ public sealed class KnowledgeDocumentHandlerTests
 
     private sealed class FakeEmbeddingService : IEmbeddingService
     {
+        public string Model => "fake-embedding";
+        public int? Dimensions => 3;
+        public int DocumentCallCount { get; private set; }
+
         public Task<EmbeddingResult> EmbedDocumentAsync(string text, CancellationToken cancellationToken)
         {
+            DocumentCallCount++;
             return Task.FromResult(new EmbeddingResult([0.1f, 0.2f, 0.3f], "fake-embedding", 3));
         }
 
@@ -317,3 +347,4 @@ public sealed class KnowledgeDocumentHandlerTests
         }
     }
 }
+
