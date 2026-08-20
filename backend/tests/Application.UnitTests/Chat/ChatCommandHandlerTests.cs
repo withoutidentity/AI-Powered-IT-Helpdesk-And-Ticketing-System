@@ -5,6 +5,7 @@ using Application.Chat.Queries.GetConversations;
 using Application.Chat.Queries.GetMessages;
 using Application.Common.Interfaces;
 using Application.Common.Models;
+using Application.KnowledgeBase.Models;
 using Domain.Entities;
 using Domain.Enums;
 using FluentAssertions;
@@ -75,7 +76,7 @@ public sealed class ChatCommandHandlerTests
         conversations.Items.Add(conversation);
         var messages = new FakeMessageRepository();
         var unitOfWork = new FakeUnitOfWork();
-        var handler = new SendMessageCommandHandler(new FakeCurrentUserService(currentUserId), conversations, messages, unitOfWork);
+        var handler = new SendMessageCommandHandler(new FakeCurrentUserService(currentUserId), conversations, messages, new FakeKnowledgeBaseSearchService(), new FakeChatAiService(), unitOfWork);
 
         var result = await handler.Handle(new SendMessageCommand(conversation.Id, " My keyboard is broken. "), CancellationToken.None);
 
@@ -84,10 +85,83 @@ public sealed class ChatCommandHandlerTests
         messages.Items[0].Sender.Should().Be(MessageSender.User);
         messages.Items[0].Content.Should().Be("My keyboard is broken.");
         messages.Items[1].Sender.Should().Be(MessageSender.Assistant);
-        result.Value!.AssistantMessage.Content.Should().Contain("AI classification");
+        result.Value!.AssistantMessage.Content.Should().Contain("could not find a matching knowledge-base article");
         unitOfWork.SaveCalls.Should().Be(1);
     }
 
+    [Fact]
+    public async Task SendMessage_KnowledgeBaseMatch_PersistsRetrievalOnlyAssistantResponse()
+    {
+        var currentUserId = Guid.NewGuid();
+        var conversation = Conversation.Start(currentUserId, "Wi-Fi", DateTimeOffset.UtcNow.AddMinutes(-1));
+        var conversations = new FakeConversationRepository();
+        conversations.Items.Add(conversation);
+        var messages = new FakeMessageRepository();
+        var unitOfWork = new FakeUnitOfWork();
+        var search = new FakeKnowledgeBaseSearchService(
+            new KnowledgeBaseSearchResultItemDto(
+                Guid.NewGuid(),
+                "Office Wi-Fi Guide",
+                "office-wifi.md",
+                "text/markdown",
+                Guid.NewGuid(),
+                0,
+                "Restart the access point and reconnect to Office-5G.",
+                "Restart the access point and reconnect to Office-5G.",
+                "fake-embedding",
+                3,
+                1));
+        var handler = new SendMessageCommandHandler(new FakeCurrentUserService(currentUserId), conversations, messages, search, new FakeChatAiService("**1. Reconnect to Office-5G.**"), unitOfWork);
+
+        var result = await handler.Handle(new SendMessageCommand(conversation.Id, "wifi not working"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        search.Queries.Should().ContainSingle().Which.Should().Be("wifi not working");
+        result.Value!.AssistantMessage.Content.Should().Contain("Office Wi-Fi Guide");
+        result.Value.AssistantMessage.Content.Should().Contain("1. Reconnect to Office-5G.");
+        result.Value.AssistantMessage.Content.Should().NotContain("**");
+        result.Value.AssistantMessage.Content.Should().Contain("Sources:");
+        messages.Items.Should().HaveCount(2);
+        unitOfWork.SaveCalls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task SendMessage_ChatAiFails_FallsBackToRetrievalOnlyResponse()
+    {
+        var currentUserId = Guid.NewGuid();
+        var conversation = Conversation.Start(currentUserId, "Wi-Fi", DateTimeOffset.UtcNow.AddMinutes(-1));
+        var conversations = new FakeConversationRepository();
+        conversations.Items.Add(conversation);
+        var messages = new FakeMessageRepository();
+        var unitOfWork = new FakeUnitOfWork();
+        var search = new FakeKnowledgeBaseSearchService(
+            new KnowledgeBaseSearchResultItemDto(
+                Guid.NewGuid(),
+                "Office Wi-Fi Guide",
+                "office-wifi.md",
+                "text/markdown",
+                Guid.NewGuid(),
+                0,
+                "Restart the access point and reconnect to Office-5G.",
+                "Restart the access point and reconnect to Office-5G.",
+                "fake-embedding",
+                3,
+                1));
+        var handler = new SendMessageCommandHandler(
+            new FakeCurrentUserService(currentUserId),
+            conversations,
+            messages,
+            search,
+            new FakeChatAiService(shouldFail: true),
+            unitOfWork);
+
+        var result = await handler.Handle(new SendMessageCommand(conversation.Id, "wifi not working"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.AssistantMessage.Content.Should().Contain("AI answer service is unavailable");
+        result.Value.AssistantMessage.Content.Should().Contain("Restart the access point");
+        result.Value.AssistantMessage.Content.Should().Contain("Sources:");
+    }
     [Fact]
     public async Task SendMessage_OtherUsersConversation_ReturnsForbidden()
     {
@@ -98,6 +172,8 @@ public sealed class ChatCommandHandlerTests
             new FakeCurrentUserService(Guid.NewGuid()),
             conversations,
             new FakeMessageRepository(),
+            new FakeKnowledgeBaseSearchService(),
+            new FakeChatAiService(),
             new FakeUnitOfWork());
 
         var result = await handler.Handle(new SendMessageCommand(conversation.Id, "Help"), CancellationToken.None);
@@ -299,6 +375,47 @@ public sealed class ChatCommandHandlerTests
     }
 
 
+
+    private sealed class FakeKnowledgeBaseSearchService : IKnowledgeBaseSearchService
+    {
+        private readonly IReadOnlyList<KnowledgeBaseSearchResultItemDto> _items;
+
+        public FakeKnowledgeBaseSearchService(params KnowledgeBaseSearchResultItemDto[] items)
+        {
+            _items = items;
+        }
+
+        public List<string> Queries { get; } = new();
+
+        public Task<Result<KnowledgeBaseSearchResultDto>> SearchAsync(string query, int limit, CancellationToken cancellationToken)
+        {
+            Queries.Add(query.Trim());
+            var result = new KnowledgeBaseSearchResultDto(query.Trim(), limit, _items.Take(limit).ToList());
+            return Task.FromResult(Result<KnowledgeBaseSearchResultDto>.Success(result));
+        }
+    }
+
+    private sealed class FakeChatAiService : IChatAiService
+    {
+        private readonly string _answer;
+        private readonly bool _shouldFail;
+
+        public FakeChatAiService(string answer = "AI answer", bool shouldFail = false)
+        {
+            _answer = answer;
+            _shouldFail = shouldFail;
+        }
+
+        public Task<string> GenerateGroundedAnswerAsync(string question, IReadOnlyList<GroundingSource> sources, CancellationToken cancellationToken)
+        {
+            if (_shouldFail)
+            {
+                throw new InvalidOperationException("AI failed.");
+            }
+
+            return Task.FromResult(_answer);
+        }
+    }
     private sealed class FakeTicketRepository : ITicketRepository
     {
         public List<Ticket> Items { get; } = new();

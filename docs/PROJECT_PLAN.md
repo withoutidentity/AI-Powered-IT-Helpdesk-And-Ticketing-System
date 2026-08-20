@@ -328,6 +328,8 @@ frontend/src/app/
 4. Call Groq chat completion with `stream: true`; forward chunks to the client via
    **Server-Sent Events (SSE)**.
 
+Current implementation note: `GET /api/v1/kb/search` performs the query-embedding and pgvector retrieval step for ITAgent/ITAdmin users. Chat send-message now reuses the same search service after explicit approval to send employee chat text to the configured embedding provider. The current chat response is non-streaming and Groq-generated from retrieved KB context, with a retrieval-only fallback when the chat provider fails. Persisted source citations and streaming remain later slices.
+
 ### 10.3 Why not a separate vector DB
 Keeping vectors inside Postgres avoids operating a second stateful service, keeps
 transactions consistent (a ticket + its embeddings context live in the same DB), and is

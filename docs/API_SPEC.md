@@ -144,7 +144,7 @@ Returns IT agents that an admin can assign tickets to. The Angular Tickets detai
 
 ## 3. Chat
 
-> **Frontend chat implementation note:** the Angular Chat route currently consumes these no-AI JSON endpoints directly. Streaming and RAG source citations are future AI/RAG slice behavior.
+> **Frontend chat implementation note:** the Angular Chat route currently consumes JSON endpoints directly. `POST /chat/conversations/{conversationId}/messages` now performs KB retrieval and returns a non-streaming Groq-generated grounded answer when matching chunks are found. Persisted source citations and token streaming are future AI/RAG slice behavior.
 
 ### `POST /chat/conversations`
 Starts a new conversation for the authenticated user. The frontend prompts for a conversation title before calling this endpoint from the `New` conversation action.
@@ -220,7 +220,7 @@ not blanket access).
 ---
 
 ### `POST /chat/conversations/{conversationId}/messages`
-Sends a user message and returns the persisted user message plus a canned assistant response in the current no-AI happy path. Streaming SSE replaces this temporary JSON response in the AI integration slice.
+Sends a user message, embeds the message as a KB search query, retrieves relevant chunks, sends those chunks plus the question to Groq for a grounded answer, and returns the persisted user message plus assistant response. If Groq fails, the backend falls back to a retrieval-only response. Streaming SSE replaces this JSON response in a later slice.
 
 **Auth required:** Yes - must be the conversation owner.
 **Response content-type:** `application/json` in the current no-AI slice; `text/event-stream` when streaming AI is implemented.
@@ -245,14 +245,14 @@ Sends a user message and returns the persisted user message plus a canned assist
     "id": "m2...",
     "conversationId": "c1a2b3c4-...",
     "sender": "Assistant",
-    "content": "I recorded your message. AI classification and RAG answers will be enabled in a later slice.",
+    "content": "1. Open Wi-Fi settings and reconnect to Office-5G.\n2. If it still fails, restart the Wi-Fi adapter and try again.\n3. Create a ticket if the adapter is missing or the error persists.\n\nSources:\n- Office Wi-Fi Guide, chunk 0",
     "intent": null,
     "createdAt": "2026-07-30T12:00:00Z"
   }
 }
 ```
 
-**Future streaming response (AI slice):** this endpoint will switch to SSE frames for `intent`, `token`, optional `sources`, and `done` once Groq streaming and RAG are implemented.
+**Future streaming response (AI slice):** this endpoint will switch to SSE frames for `intent`, `token`, optional `sources`, and `done` once Groq streaming and persisted source citations are implemented.
 ---
 
 ### `POST /chat/conversations/{conversationId}/messages/{messageId}/ticket`
@@ -298,13 +298,13 @@ Creates the single ticket for a conversation from a persisted user message in th
 ## 4. Knowledge Base (Admin)
 
 > Implementation status: the current backend supports JSON-based document creation,
-> read APIs, server-side chunking, and manual embedding reindexing. `POST /kb/documents`
+> read APIs, server-side chunking, manual embedding reindexing, and semantic chunk search. `POST /kb/documents`
 > splits pasted text into ordered chunks and stores them without vectors initially.
 > `POST /kb/documents/{documentId}/reindex` embeds each chunk with Google `gemini-embedding-001`
 > shortened to 768 dimensions, then stores the vectors in PostgreSQL `pgvector`
 > (`document_chunks.embedding vector(768)`). The backend limits embedding provider calls to
 > 2 requests/minute and 10 requests/day. File upload, PDF
-> extraction, automatic background ingestion, and chat-time RAG retrieval are planned for
+> extraction, automatic background ingestion, and chat-time LLM-generated answers are planned for
 > later KB/RAG slices.
 
 ### `POST /kb/documents`
@@ -432,7 +432,42 @@ Embeds only chunks that do not already have the current embedding model and dime
 
 ---
 
-### `DELETE /kb/documents/{documentId}`
+
+### `GET /kb/search`
+Embeds the query with the configured embedding provider and returns the nearest stored KB chunks using PostgreSQL `pgvector` cosine distance ordering. This is the first retrieval endpoint used to verify that document embeddings work before wiring full AI-generated answers into chat.
+
+**Auth required:** `ITAgent`, `ITAdmin`
+**Query:** `?query=wifi%20not%20working&limit=5`
+
+- `query`: required, max 1000 characters
+- `limit`: optional, defaults to `5`, range `1..10`
+
+**Response `200 OK`**
+```json
+{
+  "query": "wifi not working",
+  "limit": 5,
+  "items": [
+    {
+      "documentId": "d1...",
+      "documentTitle": "Office Wi-Fi Guide",
+      "sourceFile": "office-wifi.md",
+      "sourceType": "text/markdown",
+      "chunkId": "ch1...",
+      "chunkIndex": 0,
+      "content": "# Office Wi-Fi\nConnect to Office-5G using your company account...",
+      "preview": "Office Wi-Fi Connect to Office-5G using your company account...",
+      "embeddingModel": "gemini-embedding-001",
+      "embeddingDimensions": 768,
+      "rank": 1
+    }
+  ]
+}
+```
+
+**Errors:** `400` invalid query/limit or embedding provider failure; `403` employees cannot search the KB admin API
+
+---### `DELETE /kb/documents/{documentId}`
 Removes the document and its chunks. Planned for a later KB management slice.
 
 **Auth required:** `ITAdmin`

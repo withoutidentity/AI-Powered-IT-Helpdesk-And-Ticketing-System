@@ -231,6 +231,12 @@ button.secondary {
   color: #146c43;
 }
 
+.message p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .message span {
   color: #627188;
   font-size: 0.75rem;

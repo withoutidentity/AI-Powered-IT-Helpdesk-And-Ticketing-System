@@ -1,9 +1,10 @@
-﻿using Application.Common.Interfaces;
+using Application.Common.Interfaces;
 using Application.Common.Models;
 using Application.KnowledgeBase.Commands.CreateKnowledgeDocument;
 using Application.KnowledgeBase.Commands.ReindexKnowledgeDocument;
 using Application.KnowledgeBase.Queries.GetKnowledgeDocumentDetail;
 using Application.KnowledgeBase.Queries.GetKnowledgeDocuments;
+using Application.KnowledgeBase.Queries.SearchKnowledgeBase;
 using Application.KnowledgeBase.Services;
 using Domain.Entities;
 using Domain.Enums;
@@ -226,6 +227,40 @@ public sealed class KnowledgeDocumentHandlerTests
         result.ErrorCode.Should().Be("DocumentNotFound");
     }
 
+
+    [Fact]
+    public async Task SearchKnowledgeBase_ITAgent_ReturnsRelevantChunksWithDocumentMetadata()
+    {
+        var document = CreateReadyDocument("Wi-Fi Guide");
+        var chunk = DocumentChunk.Create(document.Id, 2, "# Wi-Fi\nRestart the access point and reconnect to Office-5G.", "hash", DateTimeOffset.UtcNow, 12, "fake-embedding", 3);
+        var documents = new FakeKnowledgeDocumentRepository(document);
+        var chunks = new FakeDocumentChunkRepository(chunk);
+        var search = new KnowledgeBaseSearchService(new FakeEmbeddingService(), chunks, documents);
+        var handler = new SearchKnowledgeBaseQueryHandler(new FakeCurrentUserService(Guid.NewGuid(), UserRole.ITAgent), search);
+
+        var result = await handler.Handle(new SearchKnowledgeBaseQuery("wifi not working", 5), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.Query.Should().Be("wifi not working");
+        result.Value.Items.Should().ContainSingle();
+        result.Value.Items[0].DocumentTitle.Should().Be("Wi-Fi Guide");
+        result.Value.Items[0].ChunkIndex.Should().Be(2);
+        result.Value.Items[0].Preview.Should().Contain("Wi-Fi Restart the access point");
+        result.Value.Items[0].Preview.Should().NotContain("#");
+        result.Value.Items[0].Rank.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task SearchKnowledgeBase_Employee_ReturnsForbidden()
+    {
+        var search = new KnowledgeBaseSearchService(new FakeEmbeddingService(), new FakeDocumentChunkRepository(), new FakeKnowledgeDocumentRepository());
+        var handler = new SearchKnowledgeBaseQueryHandler(new FakeCurrentUserService(Guid.NewGuid(), UserRole.Employee), search);
+
+        var result = await handler.Handle(new SearchKnowledgeBaseQuery("wifi", 5), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be("Forbidden");
+    }
     private static KnowledgeDocument CreateReadyDocument(string title)
     {
         var document = KnowledgeDocument.Create(title, title + ".md", "text/markdown", Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow);
@@ -266,6 +301,12 @@ public sealed class KnowledgeDocumentHandlerTests
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToList();
+            return Task.FromResult(result);
+        }
+
+        public Task<IReadOnlyList<KnowledgeDocument>> ListByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
+        {
+            IReadOnlyList<KnowledgeDocument> result = Items.Where(document => ids.Contains(document.Id)).ToList();
             return Task.FromResult(result);
         }
 

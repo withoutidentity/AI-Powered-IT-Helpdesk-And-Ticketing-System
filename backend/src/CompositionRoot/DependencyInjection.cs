@@ -1,4 +1,4 @@
-﻿using Application;
+using Application;
 using Application.Common.Interfaces;
 using Infrastructure.Ai;
 using Infrastructure.Identity;
@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<IKnowledgeDocumentRepository, KnowledgeDocumentRepository>();
         services.AddScoped<IDocumentChunkRepository, DocumentChunkRepository>();
         services.AddSingleton<HttpClient>();
+        services.AddScoped<IChatAiService, GroqChatService>();
         services.AddSingleton<EmbeddingRequestRateLimiter>();
         services.AddScoped<IEmbeddingService>(provider =>
         {

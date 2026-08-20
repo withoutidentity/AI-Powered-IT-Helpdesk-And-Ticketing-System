@@ -1,3 +1,117 @@
+## [2026-08-20] Strip Markdown markers from chat AI answers
+
+**Prompt/task summary:** Fix Groq-generated chat answers showing Markdown markers like `**` in the plain-text chat UI.
+
+**Files changed:**
+- `backend/src/Application/Chat/Commands/SendMessage/SendMessageCommandHandler.cs`
+- `backend/src/Infrastructure/Ai/GroqChatService.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Updated the Groq system prompt to request plain text only, with no Markdown headings, bold markers, tables, blockquotes, or code fences. Added a backend plain-text cleanup step before appending sources so common Markdown markers from model output are stripped even if the model ignores the instruction. Added test coverage for removing `**` markers from AI answers.
+
+**Why this approach:** The current chat UI renders message text as plain text, not Markdown. Sanitizing on the backend keeps responses readable without introducing Markdown rendering and sanitization complexity in the frontend.
+
+**Alternatives considered:** Rendering Markdown in Angular was deferred because arbitrary model-generated Markdown needs a sanitizer policy and styling pass. Relying only on prompt instructions was rejected because models can still emit Markdown despite being told not to.
+
+**Follow-ups / risks:** If richer formatting is desired later, add a safe Markdown renderer on the frontend and explicitly allow only a small sanitized Markdown subset.
+
+**Reviewed by human:** ?
+## [2026-08-20] Add Groq-generated grounded chat RAG answers
+
+**Prompt/task summary:** Implement backend chat RAG answers by using `IChatAiService`/Groq to answer from retrieved KB context only, with a retrieval-only fallback if the chat provider fails.
+
+**Files changed:**
+- `backend/src/Application/Common/Interfaces/IChatAiService.cs`
+- `backend/src/Application/Common/Models/GroundingSource.cs`
+- `backend/src/Application/Chat/Commands/SendMessage/SendMessageCommandHandler.cs`
+- `backend/src/CompositionRoot/DependencyInjection.cs`
+- `backend/src/Infrastructure/Ai/GroqChatService.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added a real `IChatAiService` contract and `GroqChatService` implementation for non-streaming grounded answers. `SendMessageCommandHandler` now retrieves KB chunks, sends the question plus context to Groq with a strict grounded prompt, appends sources, and falls back to retrieval-only guidance when Groq is unavailable. Added unit coverage for successful AI-generated answers and fallback behavior.
+
+**Why this approach:** Non-streaming JSON keeps the API/frontend surface stable while proving the full RAG loop. The prompt explicitly requires answering only from provided context, saying when context is insufficient, avoiding guesses, and summarizing as clear steps. Fallback preserves chat persistence even when the chat provider fails.
+
+**Alternatives considered:** Streaming tokens was deferred because it changes controller/frontend behavior and should be a separate slice. Persisting `message_sources` was also deferred; appending sources in the response gives immediate traceability without another schema/use-case change.
+
+**Follow-ups / risks:** Add persisted source citations via `message_sources`, confidence thresholds, retrieval dedup/rerank, and streaming responses. Monitor Groq failures/rate limits because chat messages now use both embedding and chat provider calls.
+
+**Reviewed by human:** ?
+## [2026-08-20] Improve retrieval-only chat answer formatting
+
+**Prompt/task summary:** Fix the chat RAG response showing raw Markdown chunks in one collapsed line, and make the current retrieval-only answer easier to read.
+
+**Files changed:**
+- `backend/src/Application/Chat/Commands/SendMessage/SendMessageCommandHandler.cs`
+- `backend/src/Application/KnowledgeBase/Services/KnowledgeBaseSearchService.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `backend/tests/Application.UnitTests/KnowledgeBase/KnowledgeDocumentHandlerTests.cs`
+- `frontend/src/app/features/chat/feature/chat-page.component.scss`
+- `docs/API_SPEC.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** KB search previews now strip common Markdown markers (`#`, bold, inline code, blockquote/list markers, markdown links, escaped punctuation) before returning preview text. Chat canned RAG responses now present a short intro, `Suggested next steps`, and `Sources` instead of dumping raw chunk previews as bullet references. The chat bubble CSS now preserves newlines with `white-space: pre-wrap` so backend multi-line responses render as separate lines.
+
+**Why this approach:** The current slice is retrieval-only, so it should not pretend to be a fully synthesized AI answer. Cleaning preview text and preserving line breaks improves readability while keeping the boundary clear: the answer is still based on retrieved KB snippets until the next LLM-generation slice.
+
+**Alternatives considered:** Sending the retrieved chunks to the chat LLM immediately would produce a more natural answer, but that belongs to the next AI-answer slice. Rendering Markdown in the frontend was also deferred because chat messages are plain text today and rendering arbitrary Markdown safely requires sanitization decisions.
+
+**Follow-ups / risks:** Retrieval can still return multiple chunks from the same issue because there is no dedup/rerank step yet. Add LLM-grounded answer generation, source persistence, and retrieval deduplication in the next RAG slices.
+
+**Reviewed by human:** ?
+## [2026-08-20] Wire chat send-message to KB retrieval
+
+**Prompt/task summary:** After explicit approval to send chat message text to the external embedding provider, connect chat send-message to the KB semantic search service and return a canned retrieval-only RAG answer.
+
+**Files changed:**
+- `backend/src/Application/Chat/Commands/SendMessage/SendMessageCommandHandler.cs`
+- `backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** `SendMessageCommandHandler` now calls `IKnowledgeBaseSearchService.SearchAsync` with the user's message and a top-3 limit. When matching KB chunks are found, the assistant message lists the relevant document titles, chunk indexes, and previews. When retrieval fails or returns no results, the handler falls back to a safe canned response. Added unit coverage for the retrieval-only assistant response.
+
+**Why this approach:** Reusing `IKnowledgeBaseSearchService` keeps chat retrieval consistent with the staff-facing KB search endpoint and avoids duplicating embed/vector-search logic. Returning a retrieval-only response proves the RAG retrieval path before introducing LLM generation, source persistence, streaming, or prompt orchestration.
+
+**Alternatives considered:** Calling the Groq chat model immediately was deferred because the user requested a canned/RAG answer first. Failing the whole chat request when KB search fails was rejected because message persistence should keep working even if the embedding provider is temporarily unavailable or rate-limited.
+
+**Follow-ups / risks:** Each chat message now consumes an embedding query request and sends message text to the configured embedding provider. Next slices should add persisted `message_sources`, confidence/threshold handling, LLM-generated grounded answers, and better UX for source display.
+
+**Reviewed by human:** ?
+## [2026-08-20] Add backend KB semantic search API
+
+**Prompt/task summary:** Add a backend KB semantic search endpoint that embeds a query, searches pgvector-backed chunks, and returns related documents/chunks. The requested chat-time RAG wiring was evaluated but deferred pending explicit approval to send employee chat text to the external embedding provider.
+
+**Files changed:**
+- `backend/src/Api/Controllers/KnowledgeBaseSearchController.cs`
+- `backend/src/Application/Common/Interfaces/IKnowledgeBaseSearchService.cs`
+- `backend/src/Application/Common/Interfaces/IKnowledgeDocumentRepository.cs`
+- `backend/src/Application/DependencyInjection.cs`
+- `backend/src/Application/KnowledgeBase/Models/KnowledgeBaseSearchResultDto.cs`
+- `backend/src/Application/KnowledgeBase/Queries/SearchKnowledgeBase/SearchKnowledgeBaseQuery.cs`
+- `backend/src/Application/KnowledgeBase/Queries/SearchKnowledgeBase/SearchKnowledgeBaseQueryHandler.cs`
+- `backend/src/Application/KnowledgeBase/Queries/SearchKnowledgeBase/SearchKnowledgeBaseQueryValidator.cs`
+- `backend/src/Application/KnowledgeBase/Services/KnowledgeBaseSearchService.cs`
+- `backend/src/Infrastructure/Persistence/Repositories/KnowledgeDocumentRepository.cs`
+- `backend/tests/Application.UnitTests/KnowledgeBase/KnowledgeDocumentHandlerTests.cs`
+- `docs/API_SPEC.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/ai-changelog/AI_CHANGELOG.md`
+
+**What changed:** Added `GET /api/v1/kb/search?query=...&limit=...` for ITAgent/ITAdmin users. The endpoint embeds the query through `IEmbeddingService`, searches existing `document_chunks` vectors via `IDocumentChunkRepository.SearchSimilarAsync`, maps results back to document metadata, and returns ranked chunk results with content and preview text. Added unit tests for successful ITAgent search and Employee authorization failure.
+
+**Why this approach:** A shared `IKnowledgeBaseSearchService` keeps retrieval logic reusable for the future chat RAG path while keeping controllers thin and provider calls behind Application interfaces. The change does not require a migration because it reuses the existing `document_chunks.embedding vector(768)` column and current repository vector search.
+
+**Alternatives considered:** Wiring chat messages directly into the embedding search in this same slice was deferred because it would send arbitrary employee chat text to Google AI Studio on every message. That is likely the intended RAG flow, but it should be an explicit privacy decision before implementation. Adding similarity scores was also deferred because the current repository returns entities ordered by pgvector distance; exposing exact distance can be added later with a query DTO if needed.
+
+**Follow-ups / risks:** After explicit approval for external embedding of chat text, update `SendMessageCommandHandler` to call `IKnowledgeBaseSearchService` and return canned RAG answers with source references. Later, persist `message_sources` for traceability and add LLM-generated grounded answers.
+
+**Reviewed by human:** ?
 ## [2026-08-20] Document planned KB duplicate handling
 
 **Prompt/task summary:** Decide whether to implement KB duplicate/version handling now or later, and record the planned work in project docs.

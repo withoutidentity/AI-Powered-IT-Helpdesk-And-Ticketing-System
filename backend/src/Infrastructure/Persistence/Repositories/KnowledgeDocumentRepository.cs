@@ -28,6 +28,14 @@ public sealed class KnowledgeDocumentRepository : IKnowledgeDocumentRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<KnowledgeDocument>> ListByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
+    {
+        return await _dbContext.KnowledgeDocuments
+            .AsNoTracking()
+            .Where(document => ids.Contains(document.Id))
+            .ToListAsync(cancellationToken);
+    }
+
     public Task<int> CountAsync(CancellationToken cancellationToken)
     {
         return _dbContext.KnowledgeDocuments.AsNoTracking().CountAsync(cancellationToken);

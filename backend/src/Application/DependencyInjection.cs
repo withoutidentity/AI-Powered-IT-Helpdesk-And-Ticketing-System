@@ -15,6 +15,7 @@ public static class DependencyInjection
         services.AddValidatorsFromAssembly(typeof(AssemblyReference).Assembly);
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
         services.AddSingleton<IKnowledgeDocumentChunker, MarkdownKnowledgeDocumentChunker>();
+        services.AddScoped<IKnowledgeBaseSearchService, KnowledgeBaseSearchService>();
 
         return services;
     }
