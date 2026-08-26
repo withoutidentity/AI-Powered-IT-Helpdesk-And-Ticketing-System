@@ -186,7 +186,35 @@ public sealed class ChatCommandHandlerTests
     }
 
     [Fact]
-    public async Task GetMessages_OwnConversation_ReturnsConversationMessagesInOrder()
+    public async Task SendMessage_GreetingIntent_SkipsRetrievalAndReturnsCannedResponse()
+    {
+        var currentUserId = Guid.NewGuid();
+        var conversation = Conversation.Start(currentUserId, "Help", DateTimeOffset.UtcNow.AddMinutes(-1));
+        var conversations = new FakeConversationRepository();
+        conversations.Items.Add(conversation);
+        var search = new FakeKnowledgeBaseSearchService();
+        var messages = new FakeMessageRepository();
+        var unitOfWork = new FakeUnitOfWork();
+        var handler = new SendMessageCommandHandler(
+            new FakeCurrentUserService(currentUserId),
+            conversations,
+            messages,
+            search,
+            new FakeChatAiService(),
+            new FakeMessageSourceRepository(),
+            unitOfWork,
+            new FakeIntentClassifierService(MessageIntent.Greeting));
+
+        var result = await handler.Handle(new SendMessageCommand(conversation.Id, "Hello"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value!.UserMessage.Intent.Should().Be("Greeting");
+        result.Value.AssistantMessage.Content.Should().Contain("Tell me what IT issue");
+        search.Queries.Should().BeEmpty();
+        unitOfWork.SaveCalls.Should().Be(1);
+    }
+        [Fact]
+public async Task GetMessages_OwnConversation_ReturnsConversationMessagesInOrder()
     {
         var currentUserId = Guid.NewGuid();
         var conversation = Conversation.Start(currentUserId, "Help", DateTimeOffset.UtcNow.AddMinutes(-2));
@@ -420,6 +448,20 @@ public sealed class ChatCommandHandlerTests
         }
     }
 
+    private sealed class FakeIntentClassifierService : IIntentClassifierService
+    {
+        private readonly MessageIntent _intent;
+
+        public FakeIntentClassifierService(MessageIntent intent)
+        {
+            _intent = intent;
+        }
+
+        public Task<MessageIntent> ClassifyAsync(string message, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(_intent);
+        }
+    }
     private sealed class FakeChatAiService : IChatAiService
     {
         private readonly string _answer;

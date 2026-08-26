@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<IDocumentChunkRepository, DocumentChunkRepository>();
         services.AddSingleton<HttpClient>();
         services.AddScoped<IChatAiService, GroqChatService>();
+        services.AddScoped<IIntentClassifierService, GroqIntentClassifierService>();
         services.AddSingleton<EmbeddingRequestRateLimiter>();
         services.AddScoped<IEmbeddingService>(provider =>
         {

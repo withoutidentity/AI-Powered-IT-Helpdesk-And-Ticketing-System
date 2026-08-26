@@ -1,3 +1,4 @@
+using Application.Chat.Commands.CreateTicketFromMessage;
 using Application.Chat.Models;
 using Application.Common.Interfaces;
 using Application.Common.Models;
@@ -17,8 +18,10 @@ public sealed class SendMessageCommandHandler : IRequestHandler<SendMessageComma
     private readonly IMessageRepository _messages;
     private readonly IKnowledgeBaseSearchService _knowledgeBaseSearch;
     private readonly IChatAiService _chatAi;
+    private readonly IIntentClassifierService? _intentClassifier;
     private readonly IMessageSourceRepository _messageSources;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISender? _sender;
 
     public SendMessageCommandHandler(
         ICurrentUserService currentUser,
@@ -27,15 +30,19 @@ public sealed class SendMessageCommandHandler : IRequestHandler<SendMessageComma
         IKnowledgeBaseSearchService knowledgeBaseSearch,
         IChatAiService chatAi,
         IMessageSourceRepository messageSources,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IIntentClassifierService? intentClassifier = null,
+        ISender? sender = null)
     {
         _currentUser = currentUser;
         _conversations = conversations;
         _messages = messages;
         _knowledgeBaseSearch = knowledgeBaseSearch;
         _chatAi = chatAi;
+        _intentClassifier = intentClassifier;
         _messageSources = messageSources;
         _unitOfWork = unitOfWork;
+        _sender = sender;
     }
 
     public async Task<Result<SendMessageResponse>> Handle(SendMessageCommand request, CancellationToken cancellationToken)
@@ -52,12 +59,17 @@ public sealed class SendMessageCommandHandler : IRequestHandler<SendMessageComma
         }
 
         var now = DateTimeOffset.UtcNow;
-        var userMessage = conversation.AddMessage(MessageSender.User, request.Content, null, now);
-        var searchResult = await _knowledgeBaseSearch.SearchAsync(request.Content, 3, cancellationToken);
-        var assistantResponse = await BuildAssistantResponseAsync(request.Content, searchResult, cancellationToken);
-        var assistantMessage = conversation.AddMessage(MessageSender.Assistant, assistantResponse.Content, null, now.AddMilliseconds(1));
+        var intent = await ClassifyOrDefaultAsync(request.Content, cancellationToken);
+        var userMessage = conversation.AddMessage(MessageSender.User, request.Content, intent, now);
 
         await _messages.AddAsync(userMessage, cancellationToken);
+        if (intent == MessageIntent.Action)
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
+        var assistantResponse = await BuildResponseAsync(conversation, userMessage, intent, request.Content, cancellationToken);
+        var assistantMessage = conversation.AddMessage(MessageSender.Assistant, assistantResponse.Content, null, now.AddMilliseconds(1));
         await _messages.AddAsync(assistantMessage, cancellationToken);
 
         var sourceRows = assistantResponse.SourceItems
@@ -72,6 +84,59 @@ public sealed class SendMessageCommandHandler : IRequestHandler<SendMessageComma
             ToDto(assistantMessage, ToSourceLabels(assistantResponse.SourceItems))));
     }
 
+    private async Task<MessageIntent> ClassifyOrDefaultAsync(string content, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return _intentClassifier is null
+                ? MessageIntent.Question
+                : await _intentClassifier.ClassifyAsync(content, cancellationToken);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or HttpRequestException or TaskCanceledException)
+        {
+            return MessageIntent.Question;
+        }
+    }
+
+    private async Task<AssistantResponse> BuildResponseAsync(
+        Conversation conversation,
+        Message userMessage,
+        MessageIntent intent,
+        string question,
+        CancellationToken cancellationToken)
+    {
+        if (intent == MessageIntent.Greeting)
+        {
+            return new AssistantResponse("Hello. Tell me what IT issue you need help with, and I will guide you or open a ticket when human support is needed.", []);
+        }
+
+        if (intent == MessageIntent.Action)
+        {
+            if (_sender is null)
+            {
+                return new AssistantResponse("I could not create the ticket right now. Please use the Create ticket action in the conversation.", []);
+            }
+
+            var ticketResult = await _sender.Send(
+                new CreateTicketFromMessageCommand(conversation.Id, userMessage.Id, conversation.Title, question, null),
+                cancellationToken);
+
+            if (ticketResult.IsSuccess)
+            {
+                return new AssistantResponse($"I created a ticket for this conversation. Ticket ID: {ticketResult.Value!.Id}.", []);
+            }
+
+            if (ticketResult.ErrorCode == "TicketAlreadyExists")
+            {
+                return new AssistantResponse("A ticket has already been created for this conversation. Please open the existing ticket for its current status.", []);
+            }
+
+            return new AssistantResponse("I could not create the ticket right now. Please try again or use the Create ticket action in the conversation.", []);
+        }
+
+        var searchResult = await _knowledgeBaseSearch.SearchAsync(question, 3, cancellationToken);
+        return await BuildAssistantResponseAsync(question, searchResult, cancellationToken);
+    }
     private async Task<AssistantResponse> BuildAssistantResponseAsync(string question, Result<KnowledgeBaseSearchResultDto> searchResult, CancellationToken cancellationToken)
     {
         if (!HasSearchItems(searchResult))

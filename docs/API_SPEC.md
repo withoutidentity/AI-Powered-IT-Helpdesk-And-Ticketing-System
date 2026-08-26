@@ -210,7 +210,7 @@ not blanket access).
     "id": "m2...",
     "sender": "Assistant",
     "content": "Go to Settings > Wi-Fi and select 'Office-5G'...",
-    "intent": null,
+    "intent": "Action",
     "sourceDocuments": ["IT Knowledge Base#chunk-14"],
     "createdAt": "2026-07-29T09:05:12Z"
   }
@@ -220,17 +220,17 @@ not blanket access).
 ---
 
 ### `POST /chat/conversations/{conversationId}/messages`
-Sends a user message, embeds the message as a KB search query, retrieves relevant chunks, sends those chunks plus the question to Groq for a grounded answer, and returns the persisted user message plus assistant response. If Groq fails, the backend falls back to a retrieval-only response. Streaming SSE replaces this JSON response in a later slice. Assistant messages generated from KB/RAG also persist source citations in `message_sources`; `sourceDocuments` is returned for traceability but the Employee UI does not need to display it.
+Sends a user message, classifies its intent as Greeting, Question, or Action, and returns the persisted user message plus assistant response. Greeting returns a canned response without RAG. Question embeds the message, retrieves relevant chunks, and sends them to Groq for a grounded answer; if Groq fails, retrieval-only fallback is used. Action automatically creates the conversation's single ticket from that user message and confirms the ticket ID; if a ticket already exists, no duplicate is created. Streaming SSE replaces this JSON response in a later slice. Assistant messages generated from KB/RAG also persist source citations in `message_sources`; `sourceDocuments` is returned for traceability but the Employee UI does not need to display it.
 
 **Auth required:** Yes - must be the conversation owner.
-**Response content-type:** `application/json` in the current no-AI slice; `text/event-stream` when streaming AI is implemented.
+**Response content-type:** `application/json` in the current non-streaming intent/RAG slice; `text/event-stream` when streaming AI is implemented.
 
 **Request**
 ```json
 { "content": "The printer on floor 3 is jammed, can someone take a look?" }
 ```
 
-**Response `200 OK` (current no-AI slice)**
+**Response `200 OK` (current non-streaming intent/RAG slice)**
 ```json
 {
   "userMessage": {
@@ -238,15 +238,15 @@ Sends a user message, embeds the message as a KB search query, retrieves relevan
     "conversationId": "c1a2b3c4-...",
     "sender": "User",
     "content": "The printer on floor 3 is jammed, can someone take a look?",
-    "intent": null,
+    "intent": "Action",
     "createdAt": "2026-07-30T12:00:00Z"
   },
   "assistantMessage": {
     "id": "m2...",
     "conversationId": "c1a2b3c4-...",
     "sender": "Assistant",
-    "content": "1. Open Wi-Fi settings and reconnect to Office-5G.\n2. If it still fails, restart the Wi-Fi adapter and try again.\n3. Create a ticket if the adapter is missing or the error persists.\n\nSources:\n- Office Wi-Fi Guide, chunk 0",
-    "intent": null,
+    "content": "I created a ticket for this conversation. Ticket ID: t123...",
+    "intent": "Action",
     "createdAt": "2026-07-30T12:00:00Z"
   }
 }

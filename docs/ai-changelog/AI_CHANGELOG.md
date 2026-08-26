@@ -4992,3 +4992,28 @@ revisit whether the transition graph needs an `Admin` override path.
 
 **Reviewed by human:** [ ]
 
+
+---
+## [2026-08-26] Add chat intent classification and automatic ticket handoff
+
+**Prompt/task summary:** Implement the next chat slice: classify messages as Greeting, Question, or Action; use RAG for questions; automatically create a ticket for actions; avoid duplicate tickets; add tests and documentation.
+
+**Files changed:**
+- backend/src/Application/Common/Interfaces/IIntentClassifierService.cs
+- backend/src/Infrastructure/Ai/GroqIntentClassifierService.cs
+- backend/src/Application/Chat/Commands/SendMessage/SendMessageCommandHandler.cs
+- backend/src/CompositionRoot/DependencyInjection.cs
+- backend/tests/Application.UnitTests/Chat/ChatCommandHandlerTests.cs
+- docs/API_SPEC.md
+- docs/PROJECT_PLAN.md
+- docs/ai-changelog/AI_CHANGELOG.md
+
+**What changed:** Added a Groq JSON-only intent classifier. Greeting messages receive a canned response without embedding or retrieval, Question messages keep the existing grounded RAG flow, and Action messages reuse CreateTicketFromMessageCommand to create the conversation single ticket and confirm its ID. Existing ticket conflicts return a clear already-created response. Classifier/provider failures default to the safer question/RAG path.
+
+**Why this approach:** Reusing the existing ticket command keeps the one-ticket rule, conversation title, activity log, authorization, and persistence behavior in one place. The classifier is behind an Application interface so the Application layer does not know about Groq and unit tests can use a fake classifier. Saving the user message before the action command is required because the existing ticket command links the ticket to a persisted message.
+
+**Alternatives considered:** Duplicating ticket creation inside the chat handler was rejected because it would drift from the manual handoff rules. Calling RAG for greetings/actions was rejected because it spends embedding/provider quota and produces less predictable workflow behavior. A classifier failure does not fail the chat request; defaulting to Question preserves the existing help path.
+
+**Follow-ups / risks:** Intent classification is still a single non-streaming provider call and can misclassify ambiguous messages. Add confidence/confirmation UX and streaming later if needed.
+
+**Reviewed by human:** [ ]
